@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Use — EvoBlob Docs</title>
+  <link rel="stylesheet" href="css/docs.css" />
+</head>
+<body>
+
+<header class="docs-header">
+  <div class="docs-header-inner">
+    <a href="../index.html" class="docs-logo"><span>🧬</span> EvoBlob</a>
+    <nav class="docs-nav">
+      <a href="../index.html">← Simulation</a>
+      <a href="tutorial.html" class="active">How to Use</a>
+      <a href="math.html">Math &amp; Algorithms</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-hero">
+  <h1>📖 How to Use EvoBlob</h1>
+  <p>A complete guide to running, configuring, and interpreting your evolutionary simulation.</p>
+</div>
+
+<div class="docs-body">
+
+  <!-- ─── TOC ─── -->
+  <nav class="docs-toc" aria-label="Table of contents">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#quick-start">Quick Start</a></li>
+      <li><a href="#interface">Interface Layout</a>
+        <ol>
+          <li><a href="#controls" class="sub">Controls Panel</a></li>
+          <li><a href="#canvas" class="sub">Simulation Canvas</a></li>
+          <li><a href="#charts" class="sub">Data Panel</a></li>
+        </ol>
+      </li>
+      <li><a href="#params">All Parameters</a></li>
+      <li><a href="#strategies">Strategies</a></li>
+      <li><a href="#lifecycle">Blob Lifecycle</a></li>
+      <li><a href="#tips">Tips &amp; Experiments</a></li>
+    </ol>
+  </nav>
+
+  <!-- ─── Content ─── -->
+  <main class="docs-content">
+
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>
+        EvoBlob is an <strong>evolutionary game theory simulation</strong> running entirely in your browser.
+        Circular agents called <em>blobs</em> repeatedly play mathematical games against each other,
+        accumulate scores (energy), reproduce, mutate, and die — creating a living ecosystem that you can observe and tune.
+      </p>
+      <p>
+        The core game is a variant of the <strong>Prisoner's Dilemma</strong>: on each round a blob either
+        <em>Cooperates</em> (C) or <em>Defects</em> (D) against its opponent, and payoffs are awarded
+        based on both choices. Over many generations, natural selection favours whichever strategy
+        best accumulates energy in the current population mix.
+      </p>
+      <div class="callout callout-info">
+        <strong>No server required.</strong> EvoBlob is a fully static web page. Open
+        <code>index.html</code> in any modern browser — no installation needed.
+      </div>
+    </section>
+
+    <section id="quick-start">
+      <h2>Quick Start</h2>
+      <ol>
+        <li>Open <code>index.html</code> in your browser.</li>
+        <li>Review the default parameters in the left panel (or leave them as-is).</li>
+        <li>Click the green <strong>▶ Start</strong> button.</li>
+        <li>Watch the canvas — blobs will move, interact, reproduce, and die.</li>
+        <li>Switch chart tabs (Population / Scores / Events) to explore the data.</li>
+        <li>Hover any blob to see its individual statistics in a tooltip.</li>
+        <li>Click <strong>⏸ Pause</strong> at any time to freeze the simulation, then
+            <strong>⏭ Step</strong> to advance one generation at a time.</li>
+        <li>Click <strong>🔄 New Sim</strong> to restart with the current settings, or
+            <strong>↺ Reset</strong> to restore all defaults.</li>
+      </ol>
+      <div class="callout callout-tip">
+        <strong>Tip:</strong> Drag the <strong>Speed</strong> slider to the right to run hundreds
+        of generations in seconds, then slow down to examine the stable state.
+      </div>
+    </section>
+
+    <section id="interface">
+      <h2>Interface Layout</h2>
+      <p>The page is divided into three columns:</p>
+      <ul>
+        <li><strong>Left (Controls)</strong> — all simulation parameters and action buttons.</li>
+        <li><strong>Centre (Canvas)</strong> — live animated visualisation of the blob population.</li>
+        <li><strong>Right (Data)</strong> — real-time charts, strategy rankings, and event log.</li>
+      </ul>
+      <p>A stat bar above the canvas always shows the current generation, total population, cumulative births/deaths/mutations, and the dominant strategy.</p>
+
+      <h3 id="controls">Controls Panel</h3>
+      <p>
+        All controls update live — you can adjust parameters <em>while the simulation is running</em>.
+        Most changes take effect on the next generation. The payoff matrix and strategy mix only apply
+        when starting a new simulation.
+      </p>
+
+      <h3 id="canvas">Simulation Canvas</h3>
+      <p>
+        Each blob is drawn as a soft circle. The <strong>colour</strong> indicates its strategy.
+        The <strong>radius</strong> reflects its current score — bigger blobs have more energy.
+        Newborn blobs pulse with a bright glow.
+      </p>
+      <p>
+        <strong>Hover</strong> any blob to see a tooltip with its ID, strategy, score, age,
+        win/loss/draw record, cooperation rate, and whether it is a mutant.
+      </p>
+
+      <h3 id="charts">Data Panel</h3>
+      <p>Three tabs are available:</p>
+      <ul>
+        <li><strong>Population</strong> — stacked area chart of how many blobs exist per strategy each generation.</li>
+        <li><strong>Scores</strong> — line chart of the average score per strategy over time.</li>
+        <li><strong>Events</strong> — stacked bar chart of births, deaths, and mutations per generation.</li>
+      </ul>
+      <p>
+        Below the charts, <strong>Strategy Rankings</strong> shows a live table sorted by current
+        population, and the <strong>Event Log</strong> records recent births, deaths, and mutations.
+      </p>
+    </section>
+
+    <section id="params">
+      <h2>All Parameters</h2>
+
+      <h3>Simulation</h3>
+      <table class="strat-table">
+        <thead><tr><th>Parameter</th><th>Range</th><th>Default</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Speed</strong></td><td>1–50</td><td>5</td><td>Generations computed per animation frame. Higher = faster but less smooth.</td></tr>
+          <tr><td><strong>Max Generations</strong></td><td>50–2000</td><td>500</td><td>Simulation stops automatically at this generation.</td></tr>
+          <tr><td><strong>Population Cap</strong></td><td>50–1000</td><td>300</td><td>Maximum blobs allowed at any time. Prevents browser slowdown.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Blobs</h3>
+      <table class="strat-table">
+        <thead><tr><th>Parameter</th><th>Range</th><th>Default</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Initial Blobs</strong></td><td>10–200</td><td>60</td><td>Starting population size.</td></tr>
+          <tr><td><strong>Starting Score</strong></td><td>1–15</td><td>5.0</td><td>Each blob's score at generation 0.</td></tr>
+          <tr><td><strong>Death Threshold</strong></td><td>0.01–2</td><td>0.1</td><td>Score below which a blob dies at the end of each generation.</td></tr>
+          <tr><td><strong>Reproduction Threshold</strong></td><td>5–30</td><td>10.0</td><td>Score at which a blob reproduces (energy splits 50/50 with a child).</td></tr>
+          <tr><td><strong>Mutation Rate</strong></td><td>0–50%</td><td>5%</td><td>Probability that a newborn adopts a random different strategy from its parent.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Matches</h3>
+      <table class="strat-table">
+        <thead><tr><th>Parameter</th><th>Range</th><th>Default</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Rounds / Match</strong></td><td>1–20</td><td>5</td><td>Number of Prisoner's Dilemma rounds per one-on-one encounter.</td></tr>
+          <tr><td><strong>Matches / Generation</strong></td><td>1–50</td><td>10</td><td>How many full rounds of pairing occur each generation. More matches = more payoff variance per gen.</td></tr>
+          <tr><td><strong>Memory Length</strong></td><td>1–20</td><td>5</td><td>How many past rounds with a specific opponent a blob can recall when deciding its move.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Payoff Matrix</h3>
+      <p>
+        Four values define the Prisoner's Dilemma payoffs. Payoffs are automatically scaled by
+        <code>1 / (matchesPerGen × roundsPerMatch)</code> to keep scores stable regardless of match frequency.
+      </p>
+      <table class="strat-table">
+        <thead><tr><th>Symbol</th><th>Name</th><th>Default</th><th>When earned</th></tr></thead>
+        <tbody>
+          <tr><td><strong>T</strong></td><td>Temptation</td><td>5</td><td>You Defect, opponent Cooperates (you win big)</td></tr>
+          <tr><td><strong>R</strong></td><td>Reward</td><td>3</td><td>Both Cooperate (mutual benefit)</td></tr>
+          <tr><td><strong>P</strong></td><td>Punishment</td><td>1</td><td>Both Defect (mutual loss)</td></tr>
+          <tr><td><strong>S</strong></td><td>Sucker</td><td>0</td><td>You Cooperate, opponent Defects (you lose)</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-warn">
+        <strong>Note:</strong> For a valid Prisoner's Dilemma the ordering must be T &gt; R &gt; P &gt; S.
+        Violating this creates different game dynamics (Stag Hunt, Chicken, etc.).
+      </div>
+
+      <h3>Strategy Mix</h3>
+      <p>
+        Each strategy slider sets its relative starting weight. Weights don't need to add to 100 —
+        they are normalised during initialisation. A strategy with weight 0 will not appear at generation 0
+        (it can still appear later via mutation).
+      </p>
+    </section>
+
+    <section id="strategies">
+      <h2>Strategies</h2>
+      <p>EvoBlob ships with 10 strategies. A blob's strategy is fixed for its lifetime; only mutation at birth can change it.</p>
+      <table class="strat-table">
+        <thead>
+          <tr><th>Strategy</th><th>Short</th><th>Decision Rule</th><th>Personality</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="strat-dot" style="background:#66bb6a"></span><strong>Always Cooperate</strong></td>
+            <td>AC</td><td>Always play C</td><td>Pacifist — exploitable but great in cooperative environments.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#ef5350"></span><strong>Always Defect</strong></td>
+            <td>AD</td><td>Always play D</td><td>Exploiter — thrives on cooperators, stagnates alone.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#42a5f5"></span><strong>Tit-for-Tat</strong></td>
+            <td>TFT</td><td>Cooperate first; then mirror opponent's last move</td><td>The classic Axelrod champion — nice, forgiving, retaliating.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#26c6da"></span><strong>Tit-for-Two-Tats</strong></td>
+            <td>TF2T</td><td>Defect only after 2 consecutive opponent defections</td><td>More forgiving than TFT — resists noise, vulnerable to exploitation.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#ff7043"></span><strong>Grudger</strong></td>
+            <td>GR</td><td>Cooperate until first betrayal, then defect forever</td><td>Long memory — a single betrayal ends all cooperation permanently.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#ab47bc"></span><strong>Pavlov</strong></td>
+            <td>PV</td><td>Win-stay, lose-shift</td><td>Adaptive — repeats moves that paid off, switches after losses.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#bdbdbd"></span><strong>Random</strong></td>
+            <td>RN</td><td>50/50 on each round</td><td>Noise agent — unpredictable, no learning.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#29b6f6"></span><strong>Generous TFT</strong></td>
+            <td>GTFT</td><td>Like TFT but forgives defection with 10% probability</td><td>Breaks mutual-defection cycles, resists mild exploitation.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#ffa726"></span><strong>Detective</strong></td>
+            <td>DT</td><td>Probe C,D,C,C → exploit if no retaliation, else TFT</td><td>Cunning — tests opponents before committing to a strategy.</td>
+          </tr>
+          <tr>
+            <td><span class="strat-dot" style="background:#a5d6a7"></span><strong>Soft Majority</strong></td>
+            <td>SM</td><td>Cooperate if opponent cooperated ≥50% of past rounds</td><td>Tolerant but reactive — responds to sustained defection patterns.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="lifecycle">
+      <h2>Blob Lifecycle</h2>
+
+      <h3>Birth</h3>
+      <p>
+        Blobs are born either at simulation start (founders) or when a parent <strong>reproduces</strong>.
+        Reproduction occurs when a blob's score reaches the <em>Reproduction Threshold</em> (default 10).
+        The parent's score is halved and the child receives the other half. The child spawns near the parent
+        and inherits its strategy, unless a mutation occurs.
+      </p>
+
+      <h3>Playing Matches</h3>
+      <p>
+        Each generation, blobs are randomly paired for <em>N matches</em>. In each match the two blobs play
+        <em>R rounds</em> of the Prisoner's Dilemma, using their memory of past interactions with that specific
+        opponent. Payoffs are immediately added to each blob's score.
+      </p>
+
+      <h3>Memory</h3>
+      <p>
+        A blob maintains a separate memory for each opponent it has met. This memory holds the last
+        <em>Memory Length</em> rounds, recording both its own move and the opponent's move. Strategies like
+        Tit-for-Tat and Grudger use this to make more informed decisions over repeated interactions.
+      </p>
+
+      <h3>Aging &amp; Death</h3>
+      <p>
+        At the end of each generation every surviving blob increments its age. Any blob whose score falls
+        below the <em>Death Threshold</em> (default 0.1) is removed from the population.
+      </p>
+
+      <h3>Mutation</h3>
+      <p>
+        When a child is born, there is a <em>Mutation Rate</em> chance it randomly adopts a completely
+        different strategy. Mutations are how rare strategies can re-enter the population and how
+        evolutionary pressure is tested. Mutants are highlighted in the tooltip and log.
+      </p>
+    </section>
+
+    <section id="tips">
+      <h2>Tips &amp; Experiments</h2>
+
+      <div class="callout callout-tip">
+        <strong>Experiment 1 — Invasion of the Defectors:</strong>
+        Set strategy mix to 100% Always Cooperate, then set mutation rate to 10%. Watch how
+        Always Defect mutants invade and collapse the cooperative population.
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>Experiment 2 — TFT vs Defectors:</strong>
+        Start with 50% Tit-for-Tat and 50% Always Defect.
+        TFT should hold its own because defectors punish each other.
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>Experiment 3 — Memory matters:</strong>
+        Set Memory Length to 1 vs 20. Short memory makes TFT almost identical to Random in some scenarios.
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>Experiment 4 — Chaos game:</strong>
+        Set T=10, S=-5, R=3, P=0 for extreme payoffs. Watch population crashes and explosions.
+      </div>
+
+      <div class="callout callout-warn">
+        <strong>Performance note:</strong> Large populations (&gt;500) with high speed may slow down
+        older computers. Reduce Population Cap if the page feels slow.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="docs-footer">
+  <p>EvoBlob Docs &nbsp;|&nbsp;
+    <a href="../index.html">Simulation</a>
+    <a href="tutorial.html">How to Use</a>
+    <a href="math.html">Math &amp; Algorithms</a>
+  </p>
+</footer>
+
+</body>
+</html>

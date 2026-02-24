@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math &amp; Algorithms — EvoBlob Docs</title>
+  <link rel="stylesheet" href="css/docs.css" />
+</head>
+<body>
+
+<header class="docs-header">
+  <div class="docs-header-inner">
+    <a href="../index.html" class="docs-logo"><span>🧬</span> EvoBlob</a>
+    <nav class="docs-nav">
+      <a href="../index.html">← Simulation</a>
+      <a href="tutorial.html">How to Use</a>
+      <a href="math.html" class="active">Math &amp; Algorithms</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-hero">
+  <h1>🔬 Math &amp; Algorithms</h1>
+  <p>The game theory, evolutionary dynamics, and implementation details behind EvoBlob.</p>
+</div>
+
+<div class="docs-body">
+
+  <!-- ─── TOC ─── -->
+  <nav class="docs-toc" aria-label="Table of contents">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#pd">Prisoner's Dilemma</a></li>
+      <li><a href="#payoff">Payoff Matrix</a></li>
+      <li><a href="#strategies">Strategy Algorithms</a></li>
+      <li><a href="#memory">Memory Model</a></li>
+      <li><a href="#evolution">Evolutionary Dynamics</a>
+        <ol>
+          <li><a href="#selection" class="sub">Selection</a></li>
+          <li><a href="#reproduction" class="sub">Reproduction</a></li>
+          <li><a href="#mutation" class="sub">Mutation</a></li>
+        </ol>
+      </li>
+      <li><a href="#scaling">Score Scaling</a></li>
+      <li><a href="#simulation-loop">Simulation Loop</a></li>
+      <li><a href="#rendering">Rendering</a></li>
+      <li><a href="#complexity">Complexity</a></li>
+      <li><a href="#references">References</a></li>
+    </ol>
+  </nav>
+
+  <!-- ─── Content ─── -->
+  <main class="docs-content">
+
+    <section id="pd">
+      <h2>The Prisoner's Dilemma</h2>
+      <p>
+        The Prisoner's Dilemma (PD) is the foundation of EvoBlob. It models a situation where two
+        rational agents each choose to either <strong>Cooperate (C)</strong> or <strong>Defect (D)</strong>
+        simultaneously, without knowing the other's choice.
+      </p>
+      <p>
+        The paradox: mutual defection is the only <em>Nash Equilibrium</em> (neither player can improve by
+        changing alone), yet mutual cooperation yields a higher total payoff for both players.
+        This tension between individual and collective rationality produces rich evolutionary dynamics.
+      </p>
+      <div class="callout callout-info">
+        <strong>Nash Equilibrium:</strong> A state where no player can improve their payoff by unilaterally
+        changing their strategy, given that all other players' strategies remain fixed.
+      </div>
+    </section>
+
+    <section id="payoff">
+      <h2>Payoff Matrix</h2>
+      <p>
+        Four constants define a Prisoner's Dilemma. The constraint <strong>T &gt; R &gt; P &gt; S</strong>
+        must hold for the game to be a true PD.
+      </p>
+
+      <div style="overflow-x:auto; text-align:center;">
+        <div class="matrix-visual">
+          <div class="mv-header"></div>
+          <div class="mv-header">Opponent: C</div>
+          <div class="mv-header">Opponent: D</div>
+
+          <div class="mv-header">Me: C</div>
+          <div class="mv-cell"><strong>R, R</strong><br><span style="font-size:.75rem;color:#5a7a4a">Reward</span></div>
+          <div class="mv-cell"><strong>S, T</strong><br><span style="font-size:.75rem;color:#5a7a4a">Sucker / Tempt.</span></div>
+
+          <div class="mv-header">Me: D</div>
+          <div class="mv-cell"><strong>T, S</strong><br><span style="font-size:.75rem;color:#5a7a4a">Tempt. / Sucker</span></div>
+          <div class="mv-cell"><strong>P, P</strong><br><span style="font-size:.75rem;color:#5a7a4a">Punishment</span></div>
+        </div>
+      </div>
+
+      <p>The cell format is <em>(my payoff, opponent payoff)</em>. In code:</p>
+      <pre><code>function calcPayoffs(moveA, moveB, { T, R, P, S }) {
+  if (moveA === 'C' && moveB === 'C') return [R, R];
+  if (moveA === 'C' && moveB === 'D') return [S, T];
+  if (moveA === 'D' && moveB === 'C') return [T, S];
+  return [P, P]; // both defect
+}</code></pre>
+
+      <h3>Iterated PD</h3>
+      <p>
+        EvoBlob uses the <strong>Iterated Prisoner's Dilemma (IPD)</strong>: two blobs play multiple rounds
+        (<code>roundsPerMatch</code>) against each other. This is crucial because it allows memory-based
+        strategies (like Tit-for-Tat) to outperform pure defectors over time.
+      </p>
+      <div class="math-block">
+        Score<sub>A</sub> += Σ<sub>r=1..R</sub> payoff(moveA<sub>r</sub>, moveB<sub>r</sub>) × scale
+      </div>
+      <p>Where <em>scale</em> normalises payoffs (see <a href="#scaling">Score Scaling</a>).</p>
+    </section>
+
+    <section id="strategies">
+      <h2>Strategy Algorithms</h2>
+      <p>All strategies are pure functions with signature:</p>
+      <pre><code>decide(memory, opponentId, params) → 'C' | 'D'</code></pre>
+      <p>Where <code>memory</code> is an ordered array of past rounds: <code>[{myMove, opponentMove}, ...]</code>.</p>
+
+      <h3>Always Cooperate / Always Defect</h3>
+      <p>Trivial baseline strategies. No memory required.</p>
+      <div class="math-block">decide(·) = C &nbsp;&nbsp; or &nbsp;&nbsp; decide(·) = D</div>
+
+      <h3>Tit-for-Tat (TFT)</h3>
+      <p>
+        Introduced by Anatol Rapoport, TFT won Axelrod's famous computer tournaments in the 1980s.
+        It is <em>nice</em> (never defects first), <em>retaliatory</em> (punishes defection immediately),
+        <em>forgiving</em> (returns to cooperation once the opponent does), and <em>clear</em> (simple to understand).
+      </p>
+      <div class="math-block">
+        decide(memory) = { C &nbsp; if |memory| = 0, &nbsp; memory[last].opponentMove &nbsp; otherwise }
+      </div>
+
+      <h3>Tit-for-Two-Tats (TF2T)</h3>
+      <p>Defects only after the opponent defects <em>twice in a row</em>. More forgiving than TFT.</p>
+      <div class="math-block">
+        decide(memory) = D &nbsp; iff &nbsp; memory[-2].opponentMove = D &nbsp;&amp;&amp;&nbsp; memory[-1].opponentMove = D
+      </div>
+
+      <h3>Grudger (Grim Trigger)</h3>
+      <p>
+        Once the opponent defects, Grudger defects <em>forever</em>. It is the harshest form of punishment.
+        In evolutionary tournaments it often outperforms TFT in very stable populations but collapses when
+        playing against other Grudgers in a noisy environment.
+      </p>
+      <div class="math-block">
+        decide(memory) = { C &nbsp; if ∀r: memory[r].opponentMove = C, &nbsp; D &nbsp; otherwise }
+      </div>
+
+      <h3>Pavlov (Win-Stay Lose-Shift)</h3>
+      <p>
+        Pavlov repeats its previous move if the outcome was "good" (payoff &gt; P), and switches otherwise.
+        This strategy can exploit accidental cooperators and self-correct out of mutual defection.
+      </p>
+      <div class="math-block">
+        last_payoff = payoff(last.myMove, last.opponentMove) <br />
+        decide = last.myMove &nbsp; if last_payoff &gt; P &nbsp; else &nbsp; flip(last.myMove)
+      </div>
+
+      <h3>Random</h3>
+      <div class="math-block">decide(·) = C with probability 0.5, D with probability 0.5</div>
+
+      <h3>Generous Tit-for-Tat (GTFT)</h3>
+      <p>
+        Cooperates in response to defection with a forgiveness probability <em>p</em> (default 10%).
+        This prevents getting locked into mutual defection spirals with noisy partners.
+      </p>
+      <div class="math-block">
+        decide(memory) = { C &nbsp; if last_opponent_move = C, <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C with prob. p &nbsp;|&nbsp; D with prob. (1−p) &nbsp; if last_opponent_move = D }
+      </div>
+
+      <h3>Detective</h3>
+      <p>
+        Runs a 4-round probe sequence (C, D, C, C). If the opponent never retaliates during the probe,
+        Detective switches to Always Defect (the opponent is too passive). Otherwise it falls back to TFT.
+      </p>
+      <pre><code>// Round 0..3: always play PROBE[round] = [C, D, C, C]
+// Round 4+:
+//   if opponent never defected during probe → Always Defect
+//   else → Tit-for-Tat</code></pre>
+
+      <h3>Soft Majority</h3>
+      <p>Cooperates if the opponent cooperated in at least half of all remembered rounds. More tolerant than Grudger but reactive to sustained defection patterns.</p>
+      <div class="math-block">
+        decide = C &nbsp; iff &nbsp; |{r : opponentMove<sub>r</sub> = C}| / |memory| ≥ 0.5
+      </div>
+    </section>
+
+    <section id="memory">
+      <h2>Memory Model</h2>
+      <p>
+        Each blob maintains a <strong>per-opponent memory</strong> — a separate ordered history for
+        every blob it has encountered. This is stored as a JavaScript <code>Map&lt;blobId, Array&lt;...&gt;&gt;</code>.
+      </p>
+      <p>
+        When two blobs meet, each records the round as:
+      </p>
+      <pre><code>blob.memory.get(opponentId).push({ myMove: 'C', opponentMove: 'D' });</code></pre>
+      <p>
+        The memory is trimmed to the last <code>memoryLen</code> entries using a sliding window:
+      </p>
+      <pre><code>if (history.length > memoryLen) {
+  history.splice(0, history.length - memoryLen);
+}</code></pre>
+      <p>
+        When a blob dies its memory is garbage-collected. When a new blob is born it starts with an
+        empty memory — it has no inherited knowledge of other blobs.
+      </p>
+      <div class="callout callout-info">
+        <strong>Memory length</strong> is a critical parameter. With <code>memoryLen = 1</code>, TFT and
+        Grudger behave identically (both react only to the last move). With longer memory, Grudger remains
+        permanently unforgiving while TFT can "forget" betrayals.
+      </div>
+    </section>
+
+    <section id="evolution">
+      <h2>Evolutionary Dynamics</h2>
+
+      <h3 id="selection">Selection (Natural)</h3>
+      <p>
+        EvoBlob uses <strong>implicit selection</strong> — there is no explicit fitness-based selection algorithm.
+        Instead, blobs with higher scores survive longer and reproduce more, while low-scoring blobs die.
+        This mimics natural selection:
+      </p>
+      <ul>
+        <li>Blobs with score &lt; <code>deathThreshold</code> → die (selection pressure)</li>
+        <li>Blobs with score ≥ <code>reproThreshold</code> → reproduce (differential reproduction)</li>
+      </ul>
+      <p>
+        Because payoffs come from the game interactions, a strategy's fitness depends on the current
+        composition of the population. This creates <strong>frequency-dependent selection</strong>:
+        a strategy can be advantageous when rare but disadvantageous when common.
+      </p>
+
+      <h3 id="reproduction">Reproduction</h3>
+      <p>
+        Reproduction is <strong>asexual</strong> — a single parent creates one offspring. At each
+        generation end, any blob above the threshold reproduces:
+      </p>
+      <div class="math-block">
+        parent.score ← parent.score / 2 <br />
+        child.score  ← parent.score &nbsp; (same value post-split)
+      </div>
+      <p>
+        The child inherits the parent's strategy and spawns at a slightly randomised position
+        near the parent. This energy split prevents unbounded score growth.
+      </p>
+      <div class="callout callout-info">
+        <strong>Population cap enforcement:</strong> Reproduction is attempted in a snapshot of the
+        pre-reproduction population, and halted if the cap is reached. This prevents exponential growth.
+      </div>
+
+      <h3 id="mutation">Mutation</h3>
+      <p>
+        Each newborn has a <code>mutationRate</code> probability of adopting a <strong>uniformly random
+        different strategy</strong>:
+      </p>
+      <pre><code>const mutated = Math.random() &lt; params.mutationRate;
+const childStrategyId = mutated
+  ? randomStrategyExcept(parent.strategyId)
+  : parent.strategyId;</code></pre>
+      <p>
+        Mutation is the source of genetic variation. Without it, lost strategies can never return.
+        With too high a mutation rate, evolutionary pressure is swamped by noise and no strategy
+        reaches dominance.
+      </p>
+      <div class="math-block">
+        P(mutation) = μ &nbsp;&nbsp; where μ ∈ [0, 1]
+      </div>
+      <p>
+        Optimal mutation rates in evolutionary game theory are problem-dependent. In most PD settings,
+        a small μ (1–10%) allows exploration without destroying selection pressure.
+      </p>
+    </section>
+
+    <section id="scaling">
+      <h2>Score Scaling</h2>
+      <p>
+        Raw payoff values (T, R, P, S) define the relative advantage of each move combination.
+        Without scaling, high match counts would cause runaway score inflation and all blobs would
+        reproduce every generation de-coupling scores from selection.
+      </p>
+      <p>
+        EvoBlob divides each payoff by:
+      </p>
+      <div class="math-block">
+        scale = 1 / (matchesPerGen × roundsPerMatch)
+      </div>
+      <p>
+        This means a generation of maximum cooperation (all R payoffs) contributes exactly R points
+        total to a blob's score — regardless of how many matches or rounds are configured.
+        A blob starting at score <code>initScore = 5</code> needs to accumulate 5 more net points
+        to reach the reproduction threshold of 10.
+      </p>
+    </section>
+
+    <section id="simulation-loop">
+      <h2>Simulation Loop</h2>
+      <p>Each generation runs the following pipeline:</p>
+      <pre><code>for each generation:
+  1. MATCHES
+     shuffle(blobs)
+     for m in 1..matchesPerGen:
+       pair blobs sequentially (odd blob sits out)
+       for each pair (A, B):
+         for r in 1..roundsPerMatch:
+           moveA = A.decide(B.id, memory, params)
+           moveB = B.decide(A.id, memory, params)
+           [pa, pb] = calcPayoffs(moveA, moveB, payoff)
+           A.score += pa × scale ; B.score += pb × scale
+           A.recordRound(B.id, moveA, moveB)
+           B.recordRound(A.id, moveB, moveA)
+
+  2. REPRODUCTION
+     for each blob (snapshot):
+       if blob.score >= reproThreshold and pop < maxPop:
+         child = blob.reproduce(mutationRate)
+         blobs.push(child)
+
+  3. AGE &amp; DEATHS
+     for each blob:
+       blob.age++
+       if blob.score &lt; deathThreshold:
+         remove from population
+
+  4. SNAPSHOT
+     record counts, avgScores per strategy
+     push to history array
+
+  5. EMIT
+     fire 'generation' event → update UI, canvas, charts</code></pre>
+
+      <h3>Pairing Algorithm</h3>
+      <p>
+        Blobs are paired using a <strong>Fisher-Yates shuffle</strong> followed by sequential pairing.
+        This gives O(n) pairing complexity with uniform random pair selection:
+      </p>
+      <pre><code>// Fisher-Yates in-place shuffle
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}</code></pre>
+
+      <h3>Rendering Loop</h3>
+      <p>
+        The canvas renderer runs its own <code>requestAnimationFrame</code> loop, independent of the
+        simulation loop. This decouples visual smoothness from simulation speed — the canvas always
+        renders at 60fps; the simulation ticks multiple generations per frame when speed is high.
+      </p>
+    </section>
+
+    <section id="rendering">
+      <h2>Rendering</h2>
+
+      <h3>Blob Visualisation</h3>
+      <p>Each blob is rendered as a layered canvas arc:</p>
+      <ul>
+        <li><strong>Glow layer</strong> — radial gradient at 1.5× radius, fades out for newborns (intensity decays 2%/frame).</li>
+        <li><strong>Body gradient</strong> — radial gradient from a lighter highlight offset top-left to a darker base.</li>
+        <li><strong>Score label</strong> — shown if radius &gt; 9px.</li>
+      </ul>
+
+      <h3>Physics (Soft Random Walk)</h3>
+      <p>
+        Blobs move using a simple velocity-damping model with boundary reflection. Positions are stored
+        in normalised coordinates [0, 1] and mapped to canvas pixels at render time, so resizing the
+        canvas does not disrupt positions:
+      </p>
+      <pre><code>blob.vx += (Math.random() - 0.5) * SPEED_BASE;
+blob.vy += (Math.random() - 0.5) * SPEED_BASE;
+blob.vx *= DAMPING;   // DAMPING = 0.95
+blob.vy *= DAMPING;
+blob.x  += blob.vx;
+blob.y  += blob.vy;
+// Boundary reflection
+if (blob.x < pad) { blob.x = pad; blob.vx =  |blob.vx|; }</code></pre>
+
+      <h3>Blob Radius</h3>
+      <div class="math-block">
+        r = r<sub>min</sub> + min(score / 10, 1) × (r<sub>max</sub> − r<sub>min</sub>)
+      </div>
+      <p>where r<sub>min</sub> = 4px and r<sub>max</sub> = 18px.</p>
+
+      <h3>Idle Pulse Animation</h3>
+      <p>Each blob oscillates its drawn radius with a per-blob phase offset:</p>
+      <div class="math-block">
+        r<sub>drawn</sub> = r × (1 + 0.04 × sin(φ + t × 1.5))
+      </div>
+      <p>where φ is randomised at birth and t is elapsed time in seconds.</p>
+    </section>
+
+    <section id="complexity">
+      <h2>Computational Complexity</h2>
+      <table class="strat-table">
+        <thead><tr><th>Operation</th><th>Complexity</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Shuffle (pairing)</td><td>O(n)</td><td>Fisher-Yates; n = population</td></tr>
+          <tr><td>Matches per generation</td><td>O(n × M × R)</td><td>M = matchesPerGen, R = roundsPerMatch</td></tr>
+          <tr><td>Reproduction scan</td><td>O(n)</td><td>Linear pass over snapshot</td></tr>
+          <tr><td>Death scan</td><td>O(n)</td><td>Linear filter</td></tr>
+          <tr><td>Strategy stats snapshot</td><td>O(n)</td><td>Counted in one pass</td></tr>
+          <tr><td>Canvas render</td><td>O(n log n)</td><td>Sort by radius + O(n) draw calls</td></tr>
+          <tr><td>Chart update</td><td>O(H)</td><td>H = history length (capped at 1000)</td></tr>
+          <tr><td>Memory per blob</td><td>O(k × L)</td><td>k = unique opponents met, L = memoryLen</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Dominant cost: the matching phase at O(n × M × R). With defaults (n=60, M=10, R=5), this is
+        3000 strategy invocations per generation — trivial for modern CPUs. At n=300, M=50, R=20 it
+        becomes 300,000 invocations/gen; still fast in JavaScript but may limit Speed at very high values.
+      </p>
+    </section>
+
+    <section id="references">
+      <h2>References &amp; Further Reading</h2>
+      <ul>
+        <li>Axelrod, R. (1984). <em>The Evolution of Cooperation.</em> Basic Books.</li>
+        <li>Axelrod, R. &amp; Hamilton, W. D. (1981). The evolution of cooperation.
+            <em>Science</em>, 211(4489), 1390–1396.</li>
+        <li>Nowak, M. A. &amp; May, R. M. (1992). Evolutionary games and spatial chaos.
+            <em>Nature</em>, 359, 826–829.</li>
+        <li>Rapoport, A. &amp; Chammah, A. M. (1965). <em>Prisoner's Dilemma.</em>
+            University of Michigan Press.</li>
+        <li>Hofbauer, J. &amp; Sigmund, K. (1998). <em>Evolutionary Games and Population Dynamics.</em>
+            Cambridge University Press.</li>
+        <li>Nowak, M. A. (2006). Five rules for the evolution of cooperation.
+            <em>Science</em>, 314(5805), 1560–1563.</li>
+        <li>Smith, J. M. (1982). <em>Evolution and the Theory of Games.</em>
+            Cambridge University Press.</li>
+      </ul>
+      <div class="callout callout-info">
+        <strong>Online tool:</strong>
+        <a href="https://ncase.me/trust/" target="_blank" rel="noopener">The Evolution of Trust</a>
+        by Nicky Case is an excellent interactive companion to these concepts.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="docs-footer">
+  <p>EvoBlob Docs &nbsp;|&nbsp;
+    <a href="../index.html">Simulation</a>
+    <a href="tutorial.html">How to Use</a>
+    <a href="math.html">Math &amp; Algorithms</a>
+  </p>
+</footer>
+
+</body>
+</html>

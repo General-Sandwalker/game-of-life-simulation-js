@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EvoBlob — Evolutionary Game of Life</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ─── HEADER ─── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🧬</span>
+        <span class="logo-text">EvoBlob</span>
+        <span class="logo-sub">Evolutionary Game of Life</span>
+      </div>
+      <nav class="header-nav">
+        <a href="#simulation" class="nav-link active">Simulation</a>
+        <a href="docs/tutorial.html" class="nav-link" target="_blank">How to Use</a>
+        <a href="docs/math.html" class="nav-link" target="_blank">Math &amp; Algorithms</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ─── HERO ─── -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">Watch Evolution Unfold</h1>
+      <p class="hero-desc">Blobs compete using game-theory strategies, reproduce, mutate, and die — all in your browser.</p>
+      <div class="hero-badges">
+        <span class="badge">Prisoner's Dilemma</span>
+        <span class="badge">10 Strategies</span>
+        <span class="badge">Real-time Charts</span>
+        <span class="badge">Mutation</span>
+      </div>
+    </div>
+    <div class="hero-orbs" aria-hidden="true">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+      <div class="orb orb-4"></div>
+      <div class="orb orb-5"></div>
+    </div>
+  </section>
+
+  <!-- ─── MAIN LAYOUT ─── -->
+  <main class="app-layout" id="simulation">
+
+    <!-- ══ LEFT: CONTROLS PANEL ══ -->
+    <aside class="panel controls-panel" id="controls">
+      <div class="panel-header">
+        <h2>⚙️ Parameters</h2>
+        <button class="btn btn-reset" id="btn-reset" title="Reset to defaults">↺ Reset</button>
+      </div>
+
+      <!-- Simulation Controls -->
+      <div class="control-group">
+        <h3 class="group-title">🎮 Simulation</h3>
+
+        <div class="control-row">
+          <label for="sim-speed">Speed <span class="val" id="val-speed">5</span>×</label>
+          <input type="range" id="sim-speed" min="1" max="50" value="5" step="1" />
+        </div>
+
+        <div class="control-row">
+          <label for="max-gen">Max Generations <span class="val" id="val-max-gen">1000</span></label>
+          <input type="range" id="max-gen" min="100" max="10000" value="1000" step="100" />
+        </div>
+
+        <div class="control-row">
+          <label for="max-pop">Population Cap <span class="val" id="val-max-pop">300</span></label>
+          <input type="range" id="max-pop" min="50" max="1000" value="300" step="10" />
+        </div>
+      </div>
+
+      <!-- Population Controls -->
+      <div class="control-group">
+        <h3 class="group-title">🫧 Blobs</h3>
+
+        <div class="control-row">
+          <label for="init-pop">Initial Blobs <span class="val" id="val-init-pop">60</span></label>
+          <input type="range" id="init-pop" min="10" max="200" value="60" step="5" />
+        </div>
+
+        <div class="control-row">
+          <label for="init-score">Starting Score <span class="val" id="val-init-score">5.0</span></label>
+          <input type="range" id="init-score" min="1" max="15" value="5" step="0.5" />
+        </div>
+
+        <div class="control-row">
+          <label for="metabolism-cost">Metabolism Cost <span class="val" id="val-metabolism">1.5</span>/gen</label>
+          <input type="range" id="metabolism-cost" min="0" max="5" value="1.5" step="0.1" />
+        </div>
+
+        <div class="control-row">
+          <label for="death-thresh">Death Threshold <span class="val" id="val-death-thresh">1.0</span></label>
+          <input type="range" id="death-thresh" min="0.1" max="5" value="1.0" step="0.1" />
+        </div>
+
+        <div class="control-row">
+          <label for="repro-thresh">Reproduction Threshold <span class="val" id="val-repro-thresh">8.0</span></label>
+          <input type="range" id="repro-thresh" min="2" max="30" value="8" step="0.5" />
+        </div>
+
+        <div class="control-row">
+          <label for="mutation-rate">Mutation Rate <span class="val" id="val-mutation-rate">5</span>%</label>
+          <input type="range" id="mutation-rate" min="0" max="50" value="5" step="1" />
+        </div>
+      </div>
+
+      <!-- Match Controls -->
+      <div class="control-group">
+        <h3 class="group-title">⚔️ Matches</h3>
+
+        <div class="control-row">
+          <label for="rounds-per-match">Rounds / Match <span class="val" id="val-rounds">5</span></label>
+          <input type="range" id="rounds-per-match" min="1" max="20" value="5" step="1" />
+        </div>
+
+        <div class="control-row">
+          <label for="matches-per-gen">Matches / Generation <span class="val" id="val-matches">10</span></label>
+          <input type="range" id="matches-per-gen" min="1" max="50" value="10" step="1" />
+        </div>
+
+        <div class="control-row">
+          <label for="memory-len">Memory Length <span class="val" id="val-memory">5</span> rounds</label>
+          <input type="range" id="memory-len" min="1" max="20" value="5" step="1" />
+        </div>
+      </div>
+
+      <!-- Payoff Matrix -->
+      <div class="control-group">
+        <h3 class="group-title">💰 Payoff Matrix</h3>
+        <div class="matrix-grid">
+          <div class="matrix-label"></div>
+          <div class="matrix-label">Coop</div>
+          <div class="matrix-label">Defect</div>
+          <div class="matrix-label">Coop</div>
+          <div class="matrix-cell">
+            <label>R <input type="number" id="payoff-R" value="3" min="0" max="10" step="0.5" /></label>
+          </div>
+          <div class="matrix-cell">
+            <label>S <input type="number" id="payoff-S" value="0" min="-5" max="5" step="0.5" /></label>
+          </div>
+          <div class="matrix-label">Defect</div>
+          <div class="matrix-cell">
+            <label>T <input type="number" id="payoff-T" value="5" min="0" max="15" step="0.5" /></label>
+          </div>
+          <div class="matrix-cell">
+            <label>P <input type="number" id="payoff-P" value="1" min="0" max="5" step="0.5" /></label>
+          </div>
+        </div>
+        <p class="matrix-note">T&gt;R&gt;P&gt;S for Prisoner's Dilemma</p>
+      </div>
+
+      <!-- Strategy Distribution -->
+      <div class="control-group">
+        <h3 class="group-title">🧠 Strategy Mix <span class="hint">(initial %)</span></h3>
+        <div id="strategy-sliders"></div>
+        <p class="strategy-total">Total: <span id="strat-total">100</span>%</p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="controls-actions">
+        <button class="btn btn-start" id="btn-start">▶ Start</button>
+        <button class="btn btn-pause" id="btn-pause" disabled>⏸ Pause</button>
+        <button class="btn btn-step" id="btn-step" disabled>⏭ Step</button>
+        <button class="btn btn-restart" id="btn-restart">🔄 New Sim</button>
+      </div>
+    </aside>
+
+    <!-- ══ CENTER: CANVAS + STATS ══ -->
+    <section class="center-area">
+
+      <!-- Generation / Stat Bar -->
+      <div class="stat-bar">
+        <div class="stat-item">
+          <span class="stat-label">Generation</span>
+          <span class="stat-value" id="stat-gen">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Population</span>
+          <span class="stat-value" id="stat-pop">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Births</span>
+          <span class="stat-value green" id="stat-births">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Deaths</span>
+          <span class="stat-value red" id="stat-deaths">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Mutations</span>
+          <span class="stat-value amber" id="stat-mutations">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Dominant</span>
+          <span class="stat-value" id="stat-dominant">—</span>
+        </div>
+      </div>
+
+      <!-- Canvas -->
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <canvas id="sim-canvas"></canvas>
+        <div class="canvas-overlay" id="canvas-overlay">
+          <div class="overlay-inner">
+            <div class="overlay-icon">🧬</div>
+            <p>Configure parameters and click <strong>Start</strong> to begin the simulation.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tooltip -->
+      <div class="blob-tooltip" id="blob-tooltip" style="display:none;"></div>
+
+      <!-- Strategy Legend -->
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <!-- ══ RIGHT: CHARTS + LOG ══ -->
+    <aside class="panel charts-panel">
+      <div class="panel-header">
+        <h2>📊 Data</h2>
+        <div class="chart-tabs">
+          <button class="tab-btn active" data-tab="population">Population</button>
+          <button class="tab-btn" data-tab="scores">Scores</button>
+          <button class="tab-btn" data-tab="events">Events</button>
+        </div>
+      </div>
+
+      <div class="chart-area" id="tab-population">
+        <canvas id="chart-population"></canvas>
+      </div>
+
+      <div class="chart-area hidden" id="tab-scores">
+        <canvas id="chart-scores"></canvas>
+      </div>
+
+      <div class="chart-area hidden" id="tab-events">
+        <canvas id="chart-events"></canvas>
+      </div>
+
+      <!-- Strategy Stats Table -->
+      <div class="strategy-stats">
+        <h3 class="group-title">Strategy Rankings</h3>
+        <table class="stats-table" id="strategy-table">
+          <thead>
+            <tr>
+              <th>Strategy</th>
+              <th>Count</th>
+              <th>Avg Score</th>
+              <th>Wins</th>
+            </tr>
+          </thead>
+          <tbody id="strategy-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Event Log -->
+      <div class="event-log">
+        <h3 class="group-title">📝 Event Log</h3>
+        <div class="log-entries" id="log-entries"></div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ─── FOOTER ─── -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p>EvoBlob · Evolutionary Game of Life Simulation</p>
+      <div class="footer-links">
+        <a href="docs/tutorial.html" target="_blank">How to Use</a>
+        <a href="docs/math.html" target="_blank">Math &amp; Algorithms</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
