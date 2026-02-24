@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Math &amp; Algorithms — EvoBlob Docs</title>
+  <title>Math &amp; Algorithms, EvoBlob Docs</title>
   <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
   <link rel="stylesheet" href="css/docs.css" />
 </head>
@@ -193,7 +193,7 @@
     <section id="memory">
       <h2>Memory Model</h2>
       <p>
-        Each blob maintains a <strong>per-opponent memory</strong> — a separate ordered history for
+        Each blob maintains a <strong>per-opponent memory</strong>, a separate ordered history for
         every blob it has encountered. This is stored as a JavaScript <code>Map&lt;blobId, Array&lt;...&gt;&gt;</code>.
       </p>
       <p>
@@ -208,7 +208,7 @@
 }</code></pre>
       <p>
         When a blob dies its memory is garbage-collected. When a new blob is born it starts with an
-        empty memory — it has no inherited knowledge of other blobs.
+        empty memory, it has no inherited knowledge of other blobs.
       </p>
       <div class="callout callout-info">
         <strong>Memory length</strong> is a critical parameter. With <code>memoryLen = 1</code>, TFT and
@@ -222,7 +222,7 @@
 
       <h3 id="selection">Selection (Natural)</h3>
       <p>
-        EvoBlob uses <strong>implicit selection</strong> — there is no explicit fitness-based selection algorithm.
+        EvoBlob uses <strong>implicit selection</strong>, there is no explicit fitness-based selection algorithm.
         Instead, blobs with higher scores survive longer and reproduce more, while low-scoring blobs die.
         This mimics natural selection:
       </p>
@@ -249,7 +249,7 @@
 
       <h3 id="reproduction">Reproduction</h3>
       <p>
-        Reproduction is <strong>asexual</strong> — a single parent creates one offspring. At each
+        Reproduction is <strong>asexual</strong>, a single parent creates one offspring. At each
         generation end, any blob above the threshold reproduces:
       </p>
       <div class="math-block">
@@ -303,7 +303,7 @@ const childStrategyId = mutated
       </div>
       <p>
         This means a generation of maximum cooperation (all R payoffs) contributes exactly R points
-        total to a blob's score — regardless of how many matches or rounds are configured.
+        total to a blob's score, regardless of how many matches or rounds are configured.
         A blob starting at score <code>initScore = 5</code> needs to accumulate 5 more net points
         to reach the reproduction threshold of 10.
       </p>
@@ -384,7 +384,7 @@ function shuffle(arr) {
       <h3>Rendering Loop</h3>
       <p>
         The canvas renderer runs its own <code>requestAnimationFrame</code> loop, independent of the
-        simulation loop. This decouples visual smoothness from simulation speed — the canvas always
+        simulation loop. This decouples visual smoothness from simulation speed, the canvas always
         renders at 60fps; the simulation ticks multiple generations per frame when speed is high.
       </p>
     </section>
@@ -395,9 +395,9 @@ function shuffle(arr) {
       <h3>Blob Visualisation</h3>
       <p>Each blob is rendered as a layered canvas arc:</p>
       <ul>
-        <li><strong>Glow layer</strong> — radial gradient at 1.5× radius, fades out for newborns (intensity decays 2%/frame).</li>
-        <li><strong>Body gradient</strong> — radial gradient from a lighter highlight offset top-left to a darker base.</li>
-        <li><strong>Score label</strong> — shown if radius &gt; 9px.</li>
+        <li><strong>Glow layer</strong>, radial gradient at 1.5× radius, fades out for newborns (intensity decays 2%/frame).</li>
+        <li><strong>Body gradient</strong>, radial gradient from a lighter highlight offset top-left to a darker base.</li>
+        <li><strong>Score label</strong>, shown if radius &gt; 9px.</li>
       </ul>
 
       <h3>Physics (Soft Random Walk)</h3>
@@ -446,7 +446,7 @@ if (blob.x < pad) { blob.x = pad; blob.vx =  |blob.vx|; }</code></pre>
       </table>
       <p>
         Dominant cost: the matching phase at O(n × M × R). With defaults (n=60, M=10, R=5), this is
-        3000 strategy invocations per generation — trivial for modern CPUs. At n=300, M=50, R=20 it
+        3000 strategy invocations per generation, trivial for modern CPUs. At n=300, M=50, R=20 it
         becomes 300,000 invocations/gen; still fast in JavaScript but may limit Speed at very high values.
       </p>
     </section>

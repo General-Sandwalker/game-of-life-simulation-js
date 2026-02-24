@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How to Use — EvoBlob Docs</title>
+  <title>How to Use, EvoBlob Docs</title>
   <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
   <link rel="stylesheet" href="css/docs.css" />
 </head>
@@ -55,7 +55,7 @@
       <p>
         EvoBlob is an <strong>evolutionary game theory simulation</strong> running entirely in your browser.
         Circular agents called <em>blobs</em> repeatedly play mathematical games against each other,
-        accumulate scores (energy), reproduce, mutate, and die — creating a living ecosystem that you can observe and tune.
+        accumulate scores (energy), reproduce, mutate, and die, creating a living ecosystem that you can observe and tune.
       </p>
       <p>
         The core game is a variant of the <strong>Prisoner's Dilemma</strong>: on each round a blob either
@@ -65,7 +65,7 @@
       </p>
       <div class="callout callout-info">
         <strong>No server required.</strong> EvoBlob is a fully static web page. Open
-        <code>index.html</code> in any modern browser — no installation needed.
+        <code>index.html</code> in any modern browser, no installation needed.
       </div>
     </section>
 
@@ -75,7 +75,7 @@
         <li>Open <code>index.html</code> in your browser.</li>
         <li>Review the default parameters in the left panel (or leave them as-is).</li>
         <li>Click the green <strong>▶ Start</strong> button.</li>
-        <li>Watch the canvas — blobs will move, interact, reproduce, and die.</li>
+        <li>Watch the canvas, blobs will move, interact, reproduce, and die.</li>
         <li>Switch chart tabs (Population / Scores / Events) to explore the data.</li>
         <li>Hover any blob to see its individual statistics in a tooltip.</li>
         <li>Click <strong>⏸ Pause</strong> at any time to freeze the simulation, then
@@ -93,15 +93,15 @@
       <h2>Interface Layout</h2>
       <p>The page is divided into three columns:</p>
       <ul>
-        <li><strong>Left (Controls)</strong> — all simulation parameters and action buttons.</li>
-        <li><strong>Centre (Canvas)</strong> — live animated visualisation of the blob population.</li>
-        <li><strong>Right (Data)</strong> — real-time charts, strategy rankings, and event log.</li>
+        <li><strong>Left (Controls)</strong>, all simulation parameters and action buttons.</li>
+        <li><strong>Centre (Canvas)</strong>, live animated visualisation of the blob population.</li>
+        <li><strong>Right (Data)</strong>, real-time charts, strategy rankings, and event log.</li>
       </ul>
       <p>A stat bar above the canvas always shows the current generation, total population, cumulative births/deaths/mutations, and the dominant strategy.</p>
 
       <h3 id="controls">Controls Panel</h3>
       <p>
-        All controls update live — you can adjust parameters <em>while the simulation is running</em>.
+        All controls update live, you can adjust parameters <em>while the simulation is running</em>.
         Most changes take effect on the next generation. The payoff matrix and strategy mix only apply
         when starting a new simulation.
       </p>
@@ -109,7 +109,7 @@
       <h3 id="canvas">Simulation Canvas</h3>
       <p>
         Each blob is drawn as a soft circle. The <strong>colour</strong> indicates its strategy.
-        The <strong>radius</strong> reflects its current score — bigger blobs have more energy.
+        The <strong>radius</strong> reflects its current score, bigger blobs have more energy.
         Newborn blobs pulse with a bright glow.
       </p>
       <p>
@@ -120,9 +120,9 @@
       <h3 id="charts">Data Panel</h3>
       <p>Three tabs are available:</p>
       <ul>
-        <li><strong>Population</strong> — stacked area chart of how many blobs exist per strategy each generation.</li>
-        <li><strong>Scores</strong> — line chart of the average score per strategy over time.</li>
-        <li><strong>Events</strong> — stacked bar chart of births, deaths, and mutations per generation.</li>
+        <li><strong>Population</strong>, stacked area chart of how many blobs exist per strategy each generation.</li>
+        <li><strong>Scores</strong>, line chart of the average score per strategy over time.</li>
+        <li><strong>Events</strong>, stacked bar chart of births, deaths, and mutations per generation.</li>
       </ul>
       <p>
         Below the charts, <strong>Strategy Rankings</strong> shows a live table sorted by current
@@ -190,7 +190,7 @@
 
       <h3>Strategy Mix</h3>
       <p>
-        Each strategy slider sets its relative starting weight. Weights don't need to add to 100 —
+        Each strategy slider sets its relative starting weight. Weights don't need to add to 100,
         they are normalised during initialisation. A strategy with weight 0 will not appear at generation 0
         (it can still appear later via mutation).
       </p>
@@ -206,31 +206,31 @@
         <tbody>
           <tr>
             <td><span class="strat-dot" style="background:#66bb6a"></span><strong>Always Cooperate</strong></td>
-            <td>AC</td><td>Always play C</td><td>Pacifist — exploitable but great in cooperative environments.</td>
+            <td>AC</td><td>Always play C</td><td>Pacifist, exploitable but great in cooperative environments.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#ef5350"></span><strong>Always Defect</strong></td>
-            <td>AD</td><td>Always play D</td><td>Exploiter — thrives on cooperators, stagnates alone.</td>
+            <td>AD</td><td>Always play D</td><td>Exploiter, thrives on cooperators, stagnates alone.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#42a5f5"></span><strong>Tit-for-Tat</strong></td>
-            <td>TFT</td><td>Cooperate first; then mirror opponent's last move</td><td>The classic Axelrod champion — nice, forgiving, retaliating.</td>
+            <td>TFT</td><td>Cooperate first; then mirror opponent's last move</td><td>The classic Axelrod champion, nice, forgiving, retaliating.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#26c6da"></span><strong>Tit-for-Two-Tats</strong></td>
-            <td>TF2T</td><td>Defect only after 2 consecutive opponent defections</td><td>More forgiving than TFT — resists noise, vulnerable to exploitation.</td>
+            <td>TF2T</td><td>Defect only after 2 consecutive opponent defections</td><td>More forgiving than TFT, resists noise, vulnerable to exploitation.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#ff7043"></span><strong>Grudger</strong></td>
-            <td>GR</td><td>Cooperate until first betrayal, then defect forever</td><td>Long memory — a single betrayal ends all cooperation permanently.</td>
+            <td>GR</td><td>Cooperate until first betrayal, then defect forever</td><td>Long memory, a single betrayal ends all cooperation permanently.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#ab47bc"></span><strong>Pavlov</strong></td>
-            <td>PV</td><td>Win-stay, lose-shift</td><td>Adaptive — repeats moves that paid off, switches after losses.</td>
+            <td>PV</td><td>Win-stay, lose-shift</td><td>Adaptive, repeats moves that paid off, switches after losses.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#bdbdbd"></span><strong>Random</strong></td>
-            <td>RN</td><td>50/50 on each round</td><td>Noise agent — unpredictable, no learning.</td>
+            <td>RN</td><td>50/50 on each round</td><td>Noise agent, unpredictable, no learning.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#29b6f6"></span><strong>Generous TFT</strong></td>
@@ -238,11 +238,11 @@
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#ffa726"></span><strong>Detective</strong></td>
-            <td>DT</td><td>Probe C,D,C,C → exploit if no retaliation, else TFT</td><td>Cunning — tests opponents before committing to a strategy.</td>
+            <td>DT</td><td>Probe C,D,C,C → exploit if no retaliation, else TFT</td><td>Cunning, tests opponents before committing to a strategy.</td>
           </tr>
           <tr>
             <td><span class="strat-dot" style="background:#a5d6a7"></span><strong>Soft Majority</strong></td>
-            <td>SM</td><td>Cooperate if opponent cooperated ≥50% of past rounds</td><td>Tolerant but reactive — responds to sustained defection patterns.</td>
+            <td>SM</td><td>Cooperate if opponent cooperated ≥50% of past rounds</td><td>Tolerant but reactive, responds to sustained defection patterns.</td>
           </tr>
         </tbody>
       </table>
@@ -292,24 +292,24 @@
       <h2>Tips &amp; Experiments</h2>
 
       <div class="callout callout-tip">
-        <strong>Experiment 1 — Invasion of the Defectors:</strong>
+        <strong>Experiment 1, Invasion of the Defectors:</strong>
         Set strategy mix to 100% Always Cooperate, then set mutation rate to 10%. Watch how
         Always Defect mutants invade and collapse the cooperative population.
       </div>
 
       <div class="callout callout-tip">
-        <strong>Experiment 2 — TFT vs Defectors:</strong>
+        <strong>Experiment 2, TFT vs Defectors:</strong>
         Start with 50% Tit-for-Tat and 50% Always Defect.
         TFT should hold its own because defectors punish each other.
       </div>
 
       <div class="callout callout-tip">
-        <strong>Experiment 3 — Memory matters:</strong>
+        <strong>Experiment 3, Memory matters:</strong>
         Set Memory Length to 1 vs 20. Short memory makes TFT almost identical to Random in some scenarios.
       </div>
 
       <div class="callout callout-tip">
-        <strong>Experiment 4 — Chaos game:</strong>
+        <strong>Experiment 4, Chaos game:</strong>
         Set T=10, S=-5, R=3, P=0 for extreme payoffs. Watch population crashes and explosions.
       </div>
 
