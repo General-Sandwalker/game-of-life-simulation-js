@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Math &amp; Algorithms, EvoBlob Docs</title>
+  <title>Math &amp; Algorithms — EvoBlob Docs</title>
   <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
   <link rel="stylesheet" href="css/docs.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
 </head>
 <body>
 
@@ -21,8 +22,8 @@
 </header>
 
 <div class="page-hero">
-  <h1>🔬 Math &amp; Algorithms</h1>
-  <p>The game theory, evolutionary dynamics, and implementation details behind EvoBlob.</p>
+  <h1>&#128300; Math &amp; Algorithms</h1>
+  <p>Formal treatment of the game-theoretic model, evolutionary dynamics, and implementation details behind EvoBlob.</p>
 </div>
 
 <div class="docs-body">
@@ -38,12 +39,18 @@
       <li><a href="#evolution">Evolutionary Dynamics</a>
         <ol>
           <li><a href="#selection" class="sub">Selection</a></li>
+          <li><a href="#metabolism-aging" class="sub">Metabolism &amp; Aging</a></li>
           <li><a href="#reproduction" class="sub">Reproduction</a></li>
           <li><a href="#mutation" class="sub">Mutation</a></li>
         </ol>
       </li>
       <li><a href="#scaling">Score Scaling</a></li>
-      <li><a href="#simulation-loop">Simulation Loop</a></li>
+      <li><a href="#simulation-loop">Simulation Loop</a>
+        <ol>
+          <li><a href="#spatial-pairing" class="sub">Spatial Pairing</a></li>
+          <li><a href="#misunderstanding" class="sub">Misunderstanding Rate</a></li>
+        </ol>
+      </li>
       <li><a href="#rendering">Rendering</a></li>
       <li><a href="#complexity">Complexity</a></li>
       <li><a href="#references">References</a></li>
@@ -65,9 +72,11 @@
         changing alone), yet mutual cooperation yields a higher total payoff for both players.
         This tension between individual and collective rationality produces rich evolutionary dynamics.
       </p>
-      <div class="callout callout-info">
-        <strong>Nash Equilibrium:</strong> A state where no player can improve their payoff by unilaterally
-        changing their strategy, given that all other players' strategies remain fixed.
+      <div class="def-block">
+        <strong>Nash Equilibrium:</strong> A strategy profile \((s_1^*, s_2^*, \ldots, s_n^*)\) such that
+        no player \(i\) can increase their payoff by unilaterally deviating—i.e., for all \(i\) and all
+        alternative strategies \(s_i'\):
+        \(u_i(s_i^*, s_{-i}^*) \geq u_i(s_i', s_{-i}^*)\).
       </div>
     </section>
 
@@ -108,10 +117,8 @@
         (<code>roundsPerMatch</code>) against each other. This is crucial because it allows memory-based
         strategies (like Tit-for-Tat) to outperform pure defectors over time.
       </p>
-      <div class="math-block">
-        Score<sub>A</sub> += Σ<sub>r=1..R</sub> payoff(moveA<sub>r</sub>, moveB<sub>r</sub>) × scale
-      </div>
-      <p>Where <em>scale</em> normalises payoffs (see <a href="#scaling">Score Scaling</a>).</p>
+      <div class="math-display">$$S_A \mathrel{{+}{=}} \sum_{r=1}^{N} \pi(m_A^r,\, m_B^r) \cdot \lambda$$</div>
+      <p>Where \(\lambda = 1/(M \cdot N)\) is a normalising scale factor (see <a href="#scaling">Score Scaling</a>), \(N\) = <code>roundsPerMatch</code>, \(M\) = <code>matchesPerGen</code>, and \(\pi\) is the payoff function mapping move pairs to payoff values.</p>
     </section>
 
     <section id="strategies">
@@ -122,7 +129,7 @@
 
       <h3>Always Cooperate / Always Defect</h3>
       <p>Trivial baseline strategies. No memory required.</p>
-      <div class="math-block">decide(·) = C &nbsp;&nbsp; or &nbsp;&nbsp; decide(·) = D</div>
+      <div class="math-display">$$f(\cdot) = C \quad \text{or} \quad f(\cdot) = D$$</div>
 
       <h3>Tit-for-Tat (TFT)</h3>
       <p>
@@ -130,15 +137,11 @@
         It is <em>nice</em> (never defects first), <em>retaliatory</em> (punishes defection immediately),
         <em>forgiving</em> (returns to cooperation once the opponent does), and <em>clear</em> (simple to understand).
       </p>
-      <div class="math-block">
-        decide(memory) = { C &nbsp; if |memory| = 0, &nbsp; memory[last].opponentMove &nbsp; otherwise }
-      </div>
+      <div class="math-display">$$f(H) = \begin{cases} C & \text{if } |H| = 0 \\ m_B^{(t-1)} & \text{otherwise} \end{cases}$$</div>
 
       <h3>Tit-for-Two-Tats (TF2T)</h3>
       <p>Defects only after the opponent defects <em>twice in a row</em>. More forgiving than TFT.</p>
-      <div class="math-block">
-        decide(memory) = D &nbsp; iff &nbsp; memory[-2].opponentMove = D &nbsp;&amp;&amp;&nbsp; memory[-1].opponentMove = D
-      </div>
+      <div class="math-display">$$f(H) = \begin{cases} D & \text{if } m_B^{(t-1)} = D \text{ and } m_B^{(t-2)} = D \\ C & \text{otherwise} \end{cases}$$</div>
 
       <h3>Grudger (Grim Trigger)</h3>
       <p>
@@ -146,32 +149,24 @@
         In evolutionary tournaments it often outperforms TFT in very stable populations but collapses when
         playing against other Grudgers in a noisy environment.
       </p>
-      <div class="math-block">
-        decide(memory) = { C &nbsp; if ∀r: memory[r].opponentMove = C, &nbsp; D &nbsp; otherwise }
-      </div>
+      <div class="math-display">$$f(H) = \begin{cases} C & \text{if } \forall\, r \in H:\; m_B^{(r)} = C \\ D & \text{otherwise} \end{cases}$$</div>
 
       <h3>Pavlov (Win-Stay Lose-Shift)</h3>
       <p>
         Pavlov repeats its previous move if the outcome was "good" (payoff &gt; P), and switches otherwise.
         This strategy can exploit accidental cooperators and self-correct out of mutual defection.
       </p>
-      <div class="math-block">
-        last_payoff = payoff(last.myMove, last.opponentMove) <br />
-        decide = last.myMove &nbsp; if last_payoff &gt; P &nbsp; else &nbsp; flip(last.myMove)
-      </div>
+      <div class="math-display">$$f(H) = \begin{cases} m_A^{(t-1)} & \text{if } \pi(m_A^{(t-1)},\, m_B^{(t-1)}) > P \\ \overline{m_A^{(t-1)}} & \text{otherwise} \end{cases}$$</div>
 
       <h3>Random</h3>
-      <div class="math-block">decide(·) = C with probability 0.5, D with probability 0.5</div>
+      <div class="math-display">$$f(\cdot) = \begin{cases} C & \text{with probability } 0.5 \\ D & \text{with probability } 0.5 \end{cases}$$</div>
 
       <h3>Generous Tit-for-Tat (GTFT)</h3>
       <p>
         Cooperates in response to defection with a forgiveness probability <em>p</em> (default 10%).
         This prevents getting locked into mutual defection spirals with noisy partners.
       </p>
-      <div class="math-block">
-        decide(memory) = { C &nbsp; if last_opponent_move = C, <br />
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C with prob. p &nbsp;|&nbsp; D with prob. (1−p) &nbsp; if last_opponent_move = D }
-      </div>
+      <div class="math-display">$$f(H) = \begin{cases} C & \text{if } m_B^{(t-1)} = C \\ C \text{ w.p. } p,\; D \text{ w.p. } 1-p & \text{if } m_B^{(t-1)} = D \end{cases}$$</div>
 
       <h3>Detective</h3>
       <p>
@@ -185,9 +180,7 @@
 
       <h3>Soft Majority</h3>
       <p>Cooperates if the opponent cooperated in at least half of all remembered rounds. More tolerant than Grudger but reactive to sustained defection patterns.</p>
-      <div class="math-block">
-        decide = C &nbsp; iff &nbsp; |{r : opponentMove<sub>r</sub> = C}| / |memory| ≥ 0.5
-      </div>
+      <div class="math-display">$$f(H) = \begin{cases} C & \text{if } \dfrac{|\{r : m_B^{(r)} = C\}|}{|H|} \geq 0.5 \\ D & \text{otherwise} \end{cases}$$</div>
     </section>
 
     <section id="memory">
@@ -238,13 +231,11 @@
 
       <h3 id="metabolism-aging">Metabolism &amp; Aging</h3>
       <p>
-        To simulate the continuous energy cost of living, a <strong>Metabolism Cost</strong> ($M_c$) is subtracted from every blob's score at the end of each generation. This creates a baseline survival pressure even if a blob doesn't participate in matches.
+        To simulate the continuous energy cost of living, a <strong>Metabolism Cost</strong> \(M_c\) is subtracted from every blob's score at the end of each generation. This creates a baseline survival pressure even if a blob doesn't participate in matches.
       </p>
-      <div class="math-block">
-        $S_{t+1} = S_t - M_c$
-      </div>
+      <div class="math-display">$$S_{t+1} = S_t - M_c$$</div>
       <p>
-        Additionally, blobs have a <strong>Maximum Age</strong> ($A_{max}$). If a blob's age exceeds this value, it dies regardless of its score. This prevents immortal blobs from dominating the population indefinitely and ensures continuous turnover, allowing new strategies to emerge.
+        Additionally, blobs have a <strong>Maximum Age</strong> \(A_{\max}\). If a blob's age exceeds this value, it dies regardless of its score. This prevents immortal blobs from dominating the population indefinitely and ensures continuous generational turnover, allowing new strategies to emerge.
       </p>
 
       <h3 id="reproduction">Reproduction</h3>
@@ -252,10 +243,7 @@
         Reproduction is <strong>asexual</strong>, a single parent creates one offspring. At each
         generation end, any blob above the threshold reproduces:
       </p>
-      <div class="math-block">
-        parent.score ← parent.score / 2 <br />
-        child.score  ← parent.score &nbsp; (same value post-split)
-      </div>
+      <div class="math-display">$$S_{\text{parent}} \leftarrow \frac{S_{\text{parent}}}{2}, \qquad S_{\text{child}} \leftarrow \frac{S_{\text{parent}}}{2}$$</div>
       <p>
         The child inherits the parent's strategy and spawns at a slightly randomised position
         near the parent. This energy split prevents unbounded score growth.
@@ -279,9 +267,7 @@ const childStrategyId = mutated
         With too high a mutation rate, evolutionary pressure is swamped by noise and no strategy
         reaches dominance.
       </p>
-      <div class="math-block">
-        P(mutation) = μ &nbsp;&nbsp; where μ ∈ [0, 1]
-      </div>
+      <div class="math-display">$$P(\text{mutation}) = \mu, \quad \mu \in [0,\,1]$$</div>
       <p>
         Optimal mutation rates in evolutionary game theory are problem-dependent. In most PD settings,
         a small μ (1–10%) allows exploration without destroying selection pressure.
@@ -298,14 +284,13 @@ const childStrategyId = mutated
       <p>
         EvoBlob divides each payoff by:
       </p>
-      <div class="math-block">
-        scale = 1 / (matchesPerGen × roundsPerMatch)
-      </div>
+      <div class="math-display">$$\lambda = \frac{1}{M \cdot N}$$</div>
+      <p>where \(M\) = <code>matchesPerGen</code> and \(N\) = <code>roundsPerMatch</code>.</p>
       <p>
-        This means a generation of maximum cooperation (all R payoffs) contributes exactly R points
-        total to a blob's score, regardless of how many matches or rounds are configured.
-        A blob starting at score <code>initScore = 5</code> needs to accumulate 5 more net points
-        to reach the reproduction threshold of 10.
+        This means a generation of pure cooperation (all payoffs equal to the Reward \(R_\text{pay}\)) contributes
+        exactly \(R_\text{pay} \cdot \lambda\) to a blob's score per generation — regardless of how many matches
+        or rounds are configured. A blob starting at \(S_0 = 5\) accumulates payoffs until reaching the
+        reproduction threshold at \(S = S_\text{repro}\).
       </p>
     </section>
 
@@ -363,22 +348,25 @@ function shuffle(arr) {
       <p>
         When <strong>Neighbor Matchups</strong> are enabled, the pairing algorithm shifts from purely random to spatially biased. The probability of two blobs interacting is inversely proportional to the Euclidean distance between them in the 2D arena.
       </p>
-      <div class="math-block">
-        $d(A, B) = \sqrt{(x_A - x_B)^2 + (y_A - y_B)^2}$
-      </div>
+      <div class="math-display">$$d(A, B) = \sqrt{(x_A - x_B)^2 + (y_A - y_B)^2}$$</div>
       <p>
-        This introduces <strong>spatial structure</strong> to the population. Cooperators can form clusters, protecting themselves from defectors by interacting primarily with each other. This is a crucial mechanism for the evolution of cooperation in many biological systems.
+        This introduces <strong>spatial structure</strong> to the population. Cooperators can form clusters,
+        protecting themselves from defectors by interacting primarily with each other — a phenomenon known
+        as <em>spatial assortment</em>. The probability of pairing with a neighbor versus a random blob
+        is controlled by the <strong>Neighbor Matchup</strong> parameter \(\rho \in [0,1]\):
       </p>
 
       <h3 id="misunderstanding">Misunderstanding Rate</h3>
       <p>
-        The <strong>Misunderstanding Rate</strong> ($\epsilon$) introduces noise into the communication between blobs. With probability $\epsilon$, a blob's intended move is flipped before the opponent observes it and payoffs are calculated.
+        The <strong>Misunderstanding Rate</strong> \(\varepsilon\) introduces implementation noise:
+        with probability \(\varepsilon\), a blob's intended move is flipped before the payoff is calculated.
+        This models the biological reality that signalling and perception are imperfect.
       </p>
-      <div class="math-block">
-        $P(\text{observed} \neq \text{intended}) = \epsilon$
-      </div>
+      <div class="math-display">$$P(\hat{m} \neq m) = \varepsilon, \quad \varepsilon \in [0,\,1]$$</div>
       <p>
-        This tests the robustness of strategies. For example, Tit for Tat is highly vulnerable to noise, as a single misunderstanding can trigger an endless cycle of retaliation between two TFT players. Strategies like Tit for Two Tats or Generous Tit for Tat are more resilient to this type of error.
+        This tests the robustness of strategies. Tit-for-Tat is highly vulnerable to noise:
+        a single misunderstood defection can trigger an endless cycle of retaliation between two TFT players.
+        Strategies like Tit-for-Two-Tats or Generous TFT are significantly more resilient.
       </p>
 
       <h3>Rendering Loop</h3>
@@ -416,17 +404,12 @@ blob.y  += blob.vy;
 if (blob.x < pad) { blob.x = pad; blob.vx =  |blob.vx|; }</code></pre>
 
       <h3>Blob Radius</h3>
-      <div class="math-block">
-        r = r<sub>min</sub> + min(score / 10, 1) × (r<sub>max</sub> − r<sub>min</sub>)
-      </div>
-      <p>where r<sub>min</sub> = 4px and r<sub>max</sub> = 18px.</p>
+      <div class="math-display">$$r = r_{\min} + \min\!\left(\frac{S}{10},\,1\right)\cdot(r_{\max} - r_{\min})$$</div>
+      <p>where \(r_{\min} = 4\,\text{px}\), \(r_{\max} = 18\,\text{px}\), and \(S\) is the blob's current score.</p>
 
       <h3>Idle Pulse Animation</h3>
-      <p>Each blob oscillates its drawn radius with a per-blob phase offset:</p>
-      <div class="math-block">
-        r<sub>drawn</sub> = r × (1 + 0.04 × sin(φ + t × 1.5))
-      </div>
-      <p>where φ is randomised at birth and t is elapsed time in seconds.</p>
+      <p>Each blob oscillates its drawn radius with a per-blob phase offset \(\varphi\) (randomised at birth) and \(t\) as elapsed time in seconds:</p>
+      <div class="math-display">$$r_{\text{drawn}} = r \cdot \bigl(1 + 0.04\sin(\varphi + 1.5\,t)\bigr)$$</div>
     </section>
 
     <section id="complexity">
@@ -486,5 +469,18 @@ if (blob.x < pad) { blob.x = pad; blob.vx =  |blob.vx|; }</code></pre>
   </p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\(', right: '\\)', display: false }
+      ],
+      throwOnError: false
+    });
+  });
+</script>
 </body>
 </html>

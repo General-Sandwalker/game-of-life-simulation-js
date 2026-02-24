@@ -80,11 +80,21 @@ a:hover { color: var(--green-300); }
 
 /* ─── Page Hero ─── */
 .page-hero {
-  background: radial-gradient(ellipse at 30% 50%, rgba(46,125,50,.2) 0%, transparent 70%),
-              var(--bg-surface);
+  background:
+    radial-gradient(ellipse at 20% 60%, rgba(46,125,50,.25) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(76,175,80,.12) 0%, transparent 50%),
+    var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  padding: 3rem 1.5rem;
+  padding: 4rem 1.5rem 3rem;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.page-hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 100%, rgba(76,175,80,.06) 0%, transparent 70%);
+  pointer-events: none;
 }
 .page-hero h1 {
   font-size: clamp(1.6rem,4vw,2.8rem); font-weight: 800;
@@ -136,15 +146,16 @@ a:hover { color: var(--green-300); }
 .docs-content { min-width: 0; }
 .docs-content section  { margin-bottom: 2.5rem; }
 .docs-content h2 {
-  font-size: 1.3rem; font-weight: 700;
+  font-size: 1.35rem; font-weight: 800;
   color: var(--green-300);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.5rem; margin-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.55rem; margin-bottom: 1.1rem;
   scroll-margin-top: 90px;
+  letter-spacing: -0.01em;
 }
 .docs-content h3 {
-  font-size: 1rem; font-weight: 600;
-  color: var(--sage); margin: 1.2rem 0 0.5rem;
+  font-size: 1.0rem; font-weight: 700;
+  color: var(--sage); margin: 1.5rem 0 0.5rem;
   scroll-margin-top: 90px;
 }
 .docs-content p { color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.9rem; }
@@ -180,15 +191,15 @@ a:hover { color: var(--green-300); }
   font-size: 0.82rem; margin: 1rem 0;
 }
 .strat-table th {
-  background: var(--bg-card);
-  padding: 8px 10px; text-align: left;
-  color: var(--text-muted); font-size: 0.75rem;
-  text-transform: uppercase; letter-spacing: .04em;
-  border-bottom: 1px solid var(--border);
+  background: rgba(76,175,80,.1);
+  padding: 9px 12px; text-align: left;
+  color: var(--sage); font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 2px solid var(--border-light);
 }
 .strat-table td {
-  padding: 8px 10px; border-bottom: 1px solid rgba(46,74,46,.3);
-  color: var(--text-secondary);
+  padding: 9px 12px; border-bottom: 1px solid rgba(46,74,46,.3);
+  color: var(--text-secondary); line-height: 1.5;
 }
 .strat-table tr:hover td { background: rgba(76,175,80,.05); }
 .strat-dot {
@@ -219,7 +230,34 @@ pre code {
   font-size: 0.82rem; color: var(--text-primary);
 }
 
-/* ─── Math / KaTeX-like blocks ─── */
+/* ─── Math display (KaTeX) ─── */
+.math-display {
+  background: linear-gradient(135deg, rgba(26,46,26,.85) 0%, rgba(20,32,20,.85) 100%);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--green-500);
+  border-radius: var(--r-md);
+  padding: 1.5rem 2rem;
+  margin: 1.4rem 0;
+  text-align: center;
+  overflow-x: auto;
+  color: var(--cream);
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+}
+.math-display .katex { font-size: 1.2rem; }
+
+/* Definition / theorem block */
+.def-block {
+  background: rgba(79,195,247,.05);
+  border: 1px solid rgba(79,195,247,.25);
+  border-left: 4px solid var(--sky);
+  border-radius: var(--r-md);
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+  font-size: 0.88rem;
+}
+.def-block strong { color: var(--sky); }
+
+/* ─── Math / KaTeX-like blocks (fallback) ─── */
 .math-block {
   background: var(--bg-card);
   border: 1px solid var(--border);

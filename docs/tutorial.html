@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How to Use, EvoBlob Docs</title>
+  <title>How to Use — EvoBlob Docs</title>
   <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
   <link rel="stylesheet" href="css/docs.css" />
 </head>
@@ -21,7 +21,7 @@
 </header>
 
 <div class="page-hero">
-  <h1>📖 How to Use EvoBlob</h1>
+  <h1>&#128214; How to Use EvoBlob</h1>
   <p>A complete guide to running, configuring, and interpreting your evolutionary simulation.</p>
 </div>
 
@@ -292,30 +292,42 @@
       <h2>Tips &amp; Experiments</h2>
 
       <div class="callout callout-tip">
-        <strong>Experiment 1, Invasion of the Defectors:</strong>
-        Set strategy mix to 100% Always Cooperate, then set mutation rate to 10%. Watch how
-        Always Defect mutants invade and collapse the cooperative population.
+        <strong>Experiment 1 — Invasion of the Defectors:</strong>
+        Set the strategy mix to 100% Always Cooperate, Mutation Rate to 10%, and run for 500 generations.
+        Observe how Always Defect mutants invade and collapse the cooperative equilibrium. This demonstrates
+        that cooperation is not evolutionarily stable without additional mechanisms.
       </div>
 
       <div class="callout callout-tip">
-        <strong>Experiment 2, TFT vs Defectors:</strong>
-        Start with 50% Tit-for-Tat and 50% Always Defect.
-        TFT should hold its own because defectors punish each other.
+        <strong>Experiment 2 — TFT vs. Defectors:</strong>
+        Start with 50% Tit-for-Tat and 50% Always Defect. Because defectors also punish each other
+        in mutual-defection rounds, TFT tends to hold its ground. Try increasing the Temptation payoff (T)
+        to see when defectors gain the upper hand.
       </div>
 
       <div class="callout callout-tip">
-        <strong>Experiment 3, Memory matters:</strong>
-        Set Memory Length to 1 vs 20. Short memory makes TFT almost identical to Random in some scenarios.
+        <strong>Experiment 3 — Effect of Memory Length:</strong>
+        Set Memory Length to 1, then repeat with 20. With short memory, TFT and Grudger behave nearly
+        identically. With long memory, Grudger becomes a permanent defector after a single mistake,
+        illustrating the cost of inflexibility.
       </div>
 
       <div class="callout callout-tip">
-        <strong>Experiment 4, Chaos game:</strong>
-        Set T=10, S=-5, R=3, P=0 for extreme payoffs. Watch population crashes and explosions.
+        <strong>Experiment 4 — Noise and Forgiveness:</strong>
+        Set Misunderstanding Rate to 20% and compare Tit-for-Tat vs. Generous TFT vs. Tit-for-Two-Tats.
+        Under high noise, TFT collapses into mutual defection spirals while the more forgiving strategies
+        maintain cooperation.
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>Experiment 5 — Spatial Clustering:</strong>
+        Set Neighbour Matchups to 100% and observe cooperator clusters forming around related blobs.
+        Then set it to 0% (pure random) and see if the same strategies survive.
       </div>
 
       <div class="callout callout-warn">
         <strong>Performance note:</strong> Large populations (&gt;500) with high speed may slow down
-        older computers. Reduce Population Cap if the page feels slow.
+        older computers. Reduce Population Cap or Speed if the page feels sluggish.
       </div>
     </section>
 
