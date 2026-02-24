@@ -235,6 +235,17 @@
         a strategy can be advantageous when rare but disadvantageous when common.
       </p>
 
+      <h3 id="metabolism-aging">Metabolism &amp; Aging</h3>
+      <p>
+        To simulate the continuous energy cost of living, a <strong>Metabolism Cost</strong> ($M_c$) is subtracted from every blob's score at the end of each generation. This creates a baseline survival pressure even if a blob doesn't participate in matches.
+      </p>
+      <div class="math-block">
+        $S_{t+1} = S_t - M_c$
+      </div>
+      <p>
+        Additionally, blobs have a <strong>Maximum Age</strong> ($A_{max}$). If a blob's age exceeds this value, it dies regardless of its score. This prevents immortal blobs from dominating the population indefinitely and ensures continuous turnover, allowing new strategies to emerge.
+      </p>
+
       <h3 id="reproduction">Reproduction</h3>
       <p>
         Reproduction is <strong>asexual</strong> — a single parent creates one offspring. At each
@@ -346,6 +357,28 @@ function shuffle(arr) {
   }
   return arr;
 }</code></pre>
+
+      <h3 id="spatial-pairing">Spatial Pairing (Neighbor Matchups)</h3>
+      <p>
+        When <strong>Neighbor Matchups</strong> are enabled, the pairing algorithm shifts from purely random to spatially biased. The probability of two blobs interacting is inversely proportional to the Euclidean distance between them in the 2D arena.
+      </p>
+      <div class="math-block">
+        $d(A, B) = \sqrt{(x_A - x_B)^2 + (y_A - y_B)^2}$
+      </div>
+      <p>
+        This introduces <strong>spatial structure</strong> to the population. Cooperators can form clusters, protecting themselves from defectors by interacting primarily with each other. This is a crucial mechanism for the evolution of cooperation in many biological systems.
+      </p>
+
+      <h3 id="misunderstanding">Misunderstanding Rate</h3>
+      <p>
+        The <strong>Misunderstanding Rate</strong> ($\epsilon$) introduces noise into the communication between blobs. With probability $\epsilon$, a blob's intended move is flipped before the opponent observes it and payoffs are calculated.
+      </p>
+      <div class="math-block">
+        $P(\text{observed} \neq \text{intended}) = \epsilon$
+      </div>
+      <p>
+        This tests the robustness of strategies. For example, Tit for Tat is highly vulnerable to noise, as a single misunderstanding can trigger an endless cycle of retaliation between two TFT players. Strategies like Tit for Two Tats or Generous Tit for Tat are more resilient to this type of error.
+      </p>
 
       <h3>Rendering Loop</h3>
       <p>

@@ -148,9 +148,11 @@
         <tbody>
           <tr><td><strong>Initial Blobs</strong></td><td>10–200</td><td>60</td><td>Starting population size.</td></tr>
           <tr><td><strong>Starting Score</strong></td><td>1–15</td><td>5.0</td><td>Each blob's score at generation 0.</td></tr>
-          <tr><td><strong>Death Threshold</strong></td><td>0.01–2</td><td>0.1</td><td>Score below which a blob dies at the end of each generation.</td></tr>
-          <tr><td><strong>Reproduction Threshold</strong></td><td>5–30</td><td>10.0</td><td>Score at which a blob reproduces (energy splits 50/50 with a child).</td></tr>
+          <tr><td><strong>Metabolism Cost</strong></td><td>0–5</td><td>1.5</td><td>Energy drained from every blob each generation. Creates survival pressure.</td></tr>
+          <tr><td><strong>Death Threshold</strong></td><td>0.1–5</td><td>1.0</td><td>Score below which a blob dies at the end of each generation.</td></tr>
+          <tr><td><strong>Reproduction Threshold</strong></td><td>2–30</td><td>8.0</td><td>Score at which a blob reproduces (energy splits 50/50 with a child).</td></tr>
           <tr><td><strong>Mutation Rate</strong></td><td>0–50%</td><td>5%</td><td>Probability that a newborn adopts a random different strategy from its parent.</td></tr>
+          <tr><td><strong>Max Age</strong></td><td>0–500</td><td>0</td><td>Maximum generations a blob can live before dying of old age (0 = immortal).</td></tr>
         </tbody>
       </table>
 
@@ -161,6 +163,8 @@
           <tr><td><strong>Rounds / Match</strong></td><td>1–20</td><td>5</td><td>Number of Prisoner's Dilemma rounds per one-on-one encounter.</td></tr>
           <tr><td><strong>Matches / Generation</strong></td><td>1–50</td><td>10</td><td>How many full rounds of pairing occur each generation. More matches = more payoff variance per gen.</td></tr>
           <tr><td><strong>Memory Length</strong></td><td>1–20</td><td>5</td><td>How many past rounds with a specific opponent a blob can recall when deciding its move.</td></tr>
+          <tr><td><strong>Neighbour Matchups</strong></td><td>0–100%</td><td>50%</td><td>Probability of pairing with the closest physical neighbour instead of a random blob.</td></tr>
+          <tr><td><strong>Misunderstanding Rate</strong></td><td>0–50%</td><td>5%</td><td>Probability of misremembering an opponent's move (recording C as D, or D as C).</td></tr>
         </tbody>
       </table>
 
@@ -270,8 +274,9 @@
 
       <h3>Aging &amp; Death</h3>
       <p>
-        At the end of each generation every surviving blob increments its age. Any blob whose score falls
-        below the <em>Death Threshold</em> (default 0.1) is removed from the population.
+        At the end of each generation every surviving blob increments its age and pays a <em>Metabolism Cost</em>.
+        Any blob whose score falls below the <em>Death Threshold</em> (default 1.0) or whose age exceeds the
+        <em>Max Age</em> (if set) is removed from the population.
       </p>
 
       <h3>Mutation</h3>

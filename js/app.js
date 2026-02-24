@@ -146,10 +146,14 @@ class Blob {
     return this.strategy.decide(history, opponentId, params);
   }
 
-  recordRound(opponentId, myMove, opponentMove, memoryLen) {
+  recordRound(opponentId, myMove, opponentMove, memoryLen, misunderstandingRate = 0) {
     if (!this.memory.has(opponentId)) this.memory.set(opponentId, []);
     const hist = this.memory.get(opponentId);
-    hist.push({ myMove, opponentMove });
+    // Misunderstanding: with some probability we misremember the opponent's move
+    const rememberedMove = (misunderstandingRate > 0 && Math.random() < misunderstandingRate)
+      ? (opponentMove === COOPERATE ? DEFECT : COOPERATE)
+      : opponentMove;
+    hist.push({ myMove, opponentMove: rememberedMove });
     if (hist.length > memoryLen) hist.splice(0, hist.length - memoryLen);
     this.totalRoundsPlayed++;
     if (myMove === 'C') this.cooperations++; else this.defections++;
@@ -179,7 +183,11 @@ class Blob {
     return child;
   }
 
-  isDead(deathThreshold) { return this.score < deathThreshold; }
+  isDead(deathThreshold, maxAge = 0) {
+    if (this.score < deathThreshold) return true;
+    if (maxAge > 0 && this.age >= maxAge) return true;
+    return false;
+  }
 
   tick() { this.age++; this.pulsePhase += 0.05; }
 
@@ -205,6 +213,7 @@ const DEFAULT_PARAMS = {
   metabolismCost: 1.5, deathThreshold: 1.0, reproThreshold: 8.0,
   mutationRate: 0.05, maxPop: 300,
   roundsPerMatch: 5, matchesPerGen: 10, memoryLen: 5,
+  neighborProb: 0.5, misunderstandingRate: 0.05, maxAge: 0,
   payoff: { T: 5, R: 3, P: 1, S: 0 },
   strategyWeights: Object.fromEntries(STRATEGIES.map(s => [s.id, s.weight])),
 };
@@ -301,9 +310,11 @@ class Simulation {
       this.emit('finished', { generation: this.generation });
       return;
     }
-    const steps = Math.max(1, Math.round(this.params.speed));
-    for (let i = 0; i < steps; i++) {
-      if (!this.isFinished) this._runGeneration();
+    // fractional speed: accumulate credits, run 1 gen per credit
+    this._frameCredit = (this._frameCredit || 0) + Math.max(0.05, this.params.speed);
+    while (this._frameCredit >= 1 && !this.isFinished) {
+      this._runGeneration();
+      this._frameCredit -= 1;
     }
     this._rafId = requestAnimationFrame(() => this._loop());
   }
@@ -315,6 +326,7 @@ class Simulation {
     const genMutations = [];
 
     const genMatchups = this._runMatches();
+    const candidates = _shuffle([...this.blobs]);
     for (const blob of candidates) {
       if (this.blobs.length >= this.params.maxPop) break;
       const child = blob.tryReproduce(this.params);
@@ -330,7 +342,7 @@ class Simulation {
     for (const blob of this.blobs) {
       blob.tick();
       blob.applyPayoff(-this.params.metabolismCost);   // metabolic drain each generation
-      if (blob.isDead(this.params.deathThreshold)) {
+      if (blob.isDead(this.params.deathThreshold, this.params.maxAge)) {
         this.totalDeaths++;
         genDeaths.push(blob);
       } else {
@@ -354,33 +366,60 @@ class Simulation {
   }
 
   _runMatches() {
-    const { roundsPerMatch, matchesPerGen, memoryLen, payoff } = this.params;
+    const { roundsPerMatch, matchesPerGen, memoryLen, payoff, neighborProb } = this.params;
     const allMatchups = [];
     if (this.blobs.length < 2) return allMatchups;
     for (let m = 0; m < matchesPerGen; m++) {
-      const shuffled = _shuffle([...this.blobs]);
-      for (let i = 0; i + 1 < shuffled.length; i += 2) {
-        const result = this._playMatch(shuffled[i], shuffled[i + 1], roundsPerMatch, memoryLen, payoff);
+      const useNeighbors = Math.random() < (neighborProb || 0);
+      const pairs = useNeighbors ? this._neighborPairs() : this._randomPairs();
+      for (const [a, b] of pairs) {
+        const result = this._playMatch(a, b, roundsPerMatch, memoryLen, payoff);
         allMatchups.push(result);
       }
     }
-    // Return a capped sample so the renderer doesn't get overwhelmed
     const cap = 60;
     if (allMatchups.length <= cap) return allMatchups;
-    const step = Math.floor(allMatchups.length / cap);
+    const step = Math.max(1, Math.floor(allMatchups.length / cap));
     return allMatchups.filter((_, i) => i % step === 0).slice(0, cap);
+  }
+
+  _randomPairs() {
+    const shuffled = _shuffle([...this.blobs]);
+    const pairs = [];
+    for (let i = 0; i + 1 < shuffled.length; i += 2) pairs.push([shuffled[i], shuffled[i + 1]]);
+    return pairs;
+  }
+
+  _neighborPairs() {
+    const used = new Set();
+    const pairs = [];
+    const blobs = _shuffle([...this.blobs]);
+    for (let i = 0; i < blobs.length; i++) {
+      const a = blobs[i];
+      if (used.has(a.id)) continue;
+      let best = null, bestDist = Infinity;
+      for (let j = 0; j < blobs.length; j++) {
+        if (i === j || used.has(blobs[j].id)) continue;
+        const dx = a.x - blobs[j].x, dy = a.y - blobs[j].y;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; best = blobs[j]; }
+      }
+      if (best) { pairs.push([a, best]); used.add(a.id); used.add(best.id); }
+    }
+    return pairs;
   }
 
   _playMatch(blobA, blobB, rounds, memoryLen, payoff) {
     let totalA = 0, totalB = 0;
     const scale = 1 / (this.params.matchesPerGen * rounds);
+    const misRate = this.params.misunderstandingRate || 0;
     const moves = [];
     for (let r = 0; r < rounds; r++) {
       const moveA = blobA.decide(blobB.id, this.params, memoryLen);
       const moveB = blobB.decide(blobA.id, this.params, memoryLen);
       const [pa, pb] = _calcPayoffs(moveA, moveB, payoff);
-      blobA.recordRound(blobB.id, moveA, moveB, memoryLen);
-      blobB.recordRound(blobA.id, moveB, moveA, memoryLen);
+      blobA.recordRound(blobB.id, moveA, moveB, memoryLen, misRate);
+      blobB.recordRound(blobA.id, moveB, moveA, memoryLen, misRate);
       blobA.applyPayoff(pa * scale);
       blobB.applyPayoff(pb * scale);
       totalA += pa; totalB += pb;
@@ -388,7 +427,8 @@ class Simulation {
     }
     blobA.recordMatchOutcome(totalA, totalB);
     blobB.recordMatchOutcome(totalB, totalA);
-    return { idA: blobA.id, idB: blobB.id, stratA: blobA.strategyId, stratB: blobB.strategyId, moves, totalA, totalB };
+    return { idA: blobA.id, idB: blobB.id, stratA: blobA.strategyId, stratB: blobB.strategyId,
+             ax: blobA.x, ay: blobA.y, bx: blobB.x, by: blobB.y, moves, totalA, totalB };
   }
 
   _snapshot() {
@@ -475,22 +515,55 @@ class Renderer {
     this.blobs    = [];
     this.newborns = new Set();
     this._dying   = [];
-    this._battles = [];   // active match visualisations
+    this._battles = [];
     this._blobMap = new Map();
     this._rafId   = null;
     this._running = false;
     this._hoveredBlob = null;
+    this.showAge  = false;
+
+    // Pan / zoom
+    this._panX = 0; this._panY = 0; this._zoom = 1;
+    this._dragging = false; this._dragStart = null; this._panStart = null;
 
     this._ro = new ResizeObserver(() => this._resize());
     this._ro.observe(canvas.parentElement);
     this._resize();
 
-    canvas.addEventListener('mousemove',  (e) => this._onMouseMove(e));
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      this._dragging = true;
+      this._dragStart = { x: e.clientX, y: e.clientY };
+      this._panStart  = { x: this._panX, y: this._panY };
+      canvas.style.cursor = 'grabbing';
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (this._dragging) {
+        this._panX = this._panStart.x + (e.clientX - this._dragStart.x);
+        this._panY = this._panStart.y + (e.clientY - this._dragStart.y);
+      } else {
+        this._onMouseMove(e);
+      }
+    });
+    canvas.addEventListener('mouseup',   () => { this._dragging = false; canvas.style.cursor = 'default'; });
     canvas.addEventListener('mouseleave', () => {
+      this._dragging = false;
       this._hoveredBlob = null;
       if (this.tooltip) this.tooltip.style.display = 'none';
+      canvas.style.cursor = 'default';
     });
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.15 : 0.87;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      this._panX = mx - (mx - this._panX) * factor;
+      this._panY = my - (my - this._panY) * factor;
+      this._zoom = Math.max(0.25, Math.min(10, this._zoom * factor));
+    }, { passive: false });
   }
+
+  resetView() { this._panX = 0; this._panY = 0; this._zoom = 1; }
 
   update(blobs, births = [], deaths = [], matchups = []) {
     const newIds = new Set(blobs.map(b => b.id));
@@ -516,15 +589,18 @@ class Renderer {
         ? 1.0
         : Math.max(0, blob.glowIntensity - 0.02);
     }
-    // Register new battles (replace existing list — show only latest generation's matches)
+    // Register new battles — use arena positions captured at match time
     this._battles = matchups.map(m => ({
       idA: m.idA, idB: m.idB,
       stratA: m.stratA, stratB: m.stratB,
+      // Arena midpoint is fixed at the positions where blobs WERE when matched
+      arenaX: ((m.ax + m.bx) / 2), arenaY: ((m.ay + m.by) / 2),
+      rax: m.ax, ray: m.ay, rbx: m.bx, rby: m.by,
       moves: m.moves,
       totalA: m.totalA, totalB: m.totalB,
-      ttl: 90, maxTtl: 90,
-      roundIdx: 0,         // which round to highlight
-      roundTimer: 0,       // frames until next round highlight
+      ttl: 100, maxTtl: 100,
+      roundIdx: 0,
+      roundTimer: 0,
     }));
   }
 
@@ -634,25 +710,29 @@ class Renderer {
     ctx.clearRect(0, 0, W, H);
 
     ctx.save();
+    ctx.translate(this._panX, this._panY);
+    ctx.scale(this._zoom, this._zoom);
+
+    // Grid
+    ctx.save();
     ctx.strokeStyle = 'rgba(46,74,46,0.12)';
-    ctx.lineWidth   = 1;
+    ctx.lineWidth   = 1 / this._zoom;
     const gridSize  = 60;
     for (let x = 0; x < W; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y < H; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
     ctx.restore();
 
     const t = performance.now() / 1000;
-
-    // Draw dying blobs first (they appear behind live blobs)
     for (const d of this._dying) this._drawDyingBlob(ctx, d, W, H);
-    // Draw battle connections (behind blobs)
     this._drawBattles(ctx, W, H);
 
-    if (this.blobs.length === 0) { this._drawEmpty(ctx, W, H); return; }
+    if (this.blobs.length === 0) { this._drawEmpty(ctx, W, H); ctx.restore(); return; }
 
     const sorted = [...this.blobs].sort((a, b) => b.displayRadius - a.displayRadius);
     for (const blob of sorted) this._drawBlob(ctx, blob, W, H, t);
     if (this._hoveredBlob) this._drawHoverOutline(ctx, this._hoveredBlob, W, H);
+
+    ctx.restore();
   }
 
   _drawBlob(ctx, blob, W, H, t) {
@@ -690,6 +770,14 @@ class Renderer {
       ctx.textBaseline = 'middle';
       ctx.fillText(parseFloat(blob.score).toFixed(1), cx, cy);
     }
+    // Age display (optional)
+    if (this.showAge && pr > 7) {
+      ctx.fillStyle    = 'rgba(200,240,200,0.7)';
+      ctx.font         = `${Math.round(pr * 0.38)}px monospace`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('a' + blob.age, cx, cy + pr * 0.45);
+    }
   }
 
   _drawHoverOutline(ctx, blob, W, H) {
@@ -704,58 +792,70 @@ class Renderer {
     if (this._battles.length === 0) return;
     ctx.save();
     for (const bat of this._battles) {
-      const blobA = this._blobMap.get(bat.idA);
-      const blobB = this._blobMap.get(bat.idB);
-      if (!blobA || !blobB) continue;
       const alpha = bat.ttl / bat.maxTtl;
-      const ax = blobA.x * W, ay = blobA.y * H;
-      const bx = blobB.x * W, by = blobB.y * H;
       const round = bat.moves[bat.roundIdx];
       const { moveA, moveB } = round;
-      // Line colour based on moves in the current round
+
+      // Outcome colour
       let lineColor;
-      if      (moveA === 'C' && moveB === 'C') lineColor = '#66bb6a'; // CC green
-      else if (moveA === 'D' && moveB === 'D') lineColor = '#ef5350'; // DD red
-      else                                     lineColor = '#ffa726'; // mixed orange
-      const rgb = _hexToRgb(lineColor);
-      // Dashed line between the two blobs
-      ctx.beginPath();
-      ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
-      ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(alpha * 0.55).toFixed(2)})`;
-      ctx.lineWidth   = 1.2;
-      ctx.setLineDash([5, 5]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Midpoint outcome badge
-      const mx = (ax + bx) / 2, my = (ay + by) / 2;
-      const label = moveA + '·' + moveB;
-      const roundLabel = `R${bat.roundIdx + 1}/${bat.moves.length}`;
+      if      (moveA === 'C' && moveB === 'C') lineColor = '#66bb6a';
+      else if (moveA === 'D' && moveB === 'D') lineColor = '#ef5350';
+      else                                     lineColor = '#ffa726';
+      const [lr, lg, lb] = _hexToRgb(lineColor);
+
+      // Arena centre (fixed at match-time positions)
+      const mx = bat.arenaX * W, my = bat.arenaY * H;
+      const arenaR = 36;
+
+      // Ghost blob positions: orbit the arena center on opposite sides
+      const angle = (bat.maxTtl - bat.ttl) * 0.04;
+      const orbitR = arenaR * 0.58;
+      const gax = mx + Math.cos(angle)          * orbitR;
+      const gay = my + Math.sin(angle)          * orbitR;
+      const gbx = mx + Math.cos(angle + Math.PI) * orbitR;
+      const gby = my + Math.sin(angle + Math.PI) * orbitR;
+
+      ctx.globalAlpha = alpha * 0.9;
+
+      // Arena ring
+      ctx.beginPath(); ctx.arc(mx, my, arenaR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${lr},${lg},${lb},0.45)`;
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+      // Inner fill
+      ctx.beginPath(); ctx.arc(mx, my, arenaR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(14,26,14,0.55)`; ctx.fill();
+
+      // Ghost blob A
+      const colorA = STRATEGY_MAP[bat.stratA] ? STRATEGY_MAP[bat.stratA].color : '#aaa';
+      const colorB = STRATEGY_MAP[bat.stratB] ? STRATEGY_MAP[bat.stratB].color : '#aaa';
+      _drawGhostBlob(ctx, gax, gay, 9, colorA, moveA);
+      _drawGhostBlob(ctx, gbx, gby, 9, colorB, moveB);
+
+      // Connecting beam between ghosts
+      const lineGrd = ctx.createLinearGradient(gax, gay, gbx, gby);
+      const [arA] = _hexToRgb(colorA); const [arB] = _hexToRgb(colorB);
+      lineGrd.addColorStop(0,   `rgba(${_hexToRgb(colorA).join(',')},0.6)`);
+      lineGrd.addColorStop(1,   `rgba(${_hexToRgb(colorB).join(',')},0.6)`);
+      ctx.beginPath(); ctx.moveTo(gax, gay); ctx.lineTo(gbx, gby);
+      ctx.strokeStyle = lineGrd; ctx.lineWidth = 1.2; ctx.stroke();
+
+      // Centre label
       ctx.globalAlpha = alpha;
-      // Badge background
-      const bw = 40, bh = 20;
-      ctx.fillStyle = `rgba(14,26,14,0.82)`;
-      ctx.beginPath();
-      ctx.roundRect(mx - bw / 2, my - bh / 2, bw, bh, 4);
-      ctx.fill();
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth   = 1;
-      ctx.stroke();
-      // Badge text: outcome
       ctx.fillStyle    = lineColor;
       ctx.font         = 'bold 9px monospace';
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, mx, my - 3);
-      ctx.fillStyle = 'rgba(180,210,160,0.8)';
+      ctx.fillText(moveA + '·' + moveB, mx, my - 4);
+      ctx.fillStyle = 'rgba(180,210,160,0.85)';
       ctx.font      = '7px monospace';
-      ctx.fillText(roundLabel, mx, my + 5);
-      // Move labels at each end (near the blob)
-      const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
-      const ux = dx / len, uy = dy / len;
-      const pad = (blobA.displayRadius || 8) + 10;
-      const padB = (blobB.displayRadius || 8) + 10;
-      _drawMoveChip(ctx, ax + ux * pad, ay + uy * pad, moveA, alpha);
-      _drawMoveChip(ctx, bx - ux * padB, by - uy * padB, moveB, alpha);
+      ctx.fillText(`R${bat.roundIdx + 1}/${bat.moves.length}`, mx, my + 5);
+
+      // Score tally (winner arrow)
+      const winnerGlyph = bat.totalA > bat.totalB ? '▲▼' : bat.totalB > bat.totalA ? '▼▲' : '=';
+      ctx.fillStyle = 'rgba(180,210,160,0.6)';
+      ctx.font      = '6px monospace';
+      ctx.fillText(bat.totalA.toFixed(0) + ':' + bat.totalB.toFixed(0), mx, my + 13);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
@@ -803,8 +903,9 @@ class Renderer {
 
   _onMouseMove(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const mx   = e.clientX - rect.left;
-    const my   = e.clientY - rect.top;
+    // Transform mouse coords into canvas space (account for pan/zoom)
+    const mx = (e.clientX - rect.left - this._panX) / this._zoom;
+    const my = (e.clientY - rect.top  - this._panY) / this._zoom;
     const W    = this.canvas.width;
     const H    = this.canvas.height;
     let closest = null, minDist = Infinity;
@@ -865,6 +966,20 @@ function _drawMoveChip(ctx, x, y, move, alpha) {
   ctx.textBaseline = 'middle';
   ctx.fillText(move, x, y);
   ctx.restore();
+}
+function _drawGhostBlob(ctx, cx, cy, r, color, move) {
+  const grd = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.05, cx, cy, r);
+  grd.addColorStop(0, _lighten(color, 0.3));
+  grd.addColorStop(1, _darken(color, 0.4));
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grd; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
+  const isC = move === 'C';
+  ctx.fillStyle    = isC ? '#aaffaa' : '#ffaaaa';
+  ctx.font         = 'bold 7px monospace';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(move, cx, cy);
 }
 
 /* ─── charts.js ──────────────────────────────────────────────────────────── */
@@ -1035,6 +1150,7 @@ class ChartManager {
 
   const ui = {
     speed:          $('sim-speed'),
+    arenaHeight:    $('arena-height'),
     maxGen:         $('max-gen'),
     maxPop:         $('max-pop'),
     initPop:        $('init-pop'),
@@ -1046,12 +1162,17 @@ class ChartManager {
     roundsPerMatch: $('rounds-per-match'),
     matchesPerGen:  $('matches-per-gen'),
     memoryLen:      $('memory-len'),
+    neighborProb:   $('neighbor-prob'),
+    misunderstandRate: $('misunderstand-rate'),
+    maxAge:         $('max-age'),
+    showAge:        $('show-age'),
     payoffT:        $('payoff-T'),
     payoffR:        $('payoff-R'),
     payoffP:        $('payoff-P'),
     payoffS:        $('payoff-S'),
 
     valSpeed:       $('val-speed'),
+    valArenaHeight: $('val-arena-height'),
     valMaxGen:      $('val-max-gen'),
     valMaxPop:      $('val-max-pop'),
     valInitPop:     $('val-init-pop'),
@@ -1063,12 +1184,20 @@ class ChartManager {
     valRounds:      $('val-rounds'),
     valMatches:     $('val-matches'),
     valMemory:      $('val-memory'),
+    valNeighbor:    $('val-neighbor'),
+    valMisunderstand: $('val-misunderstand'),
+    valMaxAge:      $('val-max-age'),
 
     btnStart:   $('btn-start'),
     btnPause:   $('btn-pause'),
     btnStep:    $('btn-step'),
     btnRestart: $('btn-restart'),
     btnReset:   $('btn-reset'),
+    btnZoomIn:  $('btn-zoom-in'),
+    btnZoomOut: $('btn-zoom-out'),
+    btnPanReset:$('btn-pan-reset'),
+    endModal:   $('end-modal'),
+    btnCloseEnd:$('btn-close-end'),
 
     statGen:       $('stat-gen'),
     statPop:       $('stat-pop'),
@@ -1078,6 +1207,7 @@ class ChartManager {
     statDominant:  $('stat-dominant'),
 
     canvas:      $('sim-canvas'),
+    canvasWrapper: $('canvas-wrapper'),
     overlay:     $('canvas-overlay'),
     tooltip:     $('blob-tooltip'),
     legend:      $('legend'),
@@ -1145,7 +1275,7 @@ class ChartManager {
   }
 
   function initSliders() {
-    bindSlider(ui.speed,          ui.valSpeed,       function(v){ return v; });
+    bindSlider(ui.speed,          ui.valSpeed,       function(v){ return parseFloat(v).toFixed(1); });
     bindSlider(ui.maxGen,         ui.valMaxGen,      function(v){ return v; });
     bindSlider(ui.maxPop,         ui.valMaxPop,      function(v){ return v; });
     bindSlider(ui.initPop,        ui.valInitPop,     function(v){ return v; });
@@ -1157,23 +1287,42 @@ class ChartManager {
     bindSlider(ui.roundsPerMatch, ui.valRounds,      function(v){ return v; });
     bindSlider(ui.matchesPerGen,  ui.valMatches,     function(v){ return v; });
     bindSlider(ui.memoryLen,      ui.valMemory,      function(v){ return v; });
+    bindSlider(ui.neighborProb,   ui.valNeighbor,    function(v){ return v; });
+    bindSlider(ui.misunderstandRate, ui.valMisunderstand, function(v){ return v; });
+    bindSlider(ui.maxAge,         ui.valMaxAge,      function(v){ return parseInt(v, 10) === 0 ? '∞' : v; });
+    // Arena height — also sets the wrapper's CSS height so ResizeObserver fires
+    bindSlider(ui.arenaHeight,    ui.valArenaHeight, function(v){ return v; });
+    if (ui.arenaHeight) {
+      const applyHeight = function() {
+        if (ui.canvasWrapper) {
+          ui.canvasWrapper.style.height = ui.arenaHeight.value + 'px';
+          ui.canvasWrapper.style.flex = 'none';
+        }
+      };
+      ui.arenaHeight.addEventListener('input', applyHeight);
+      // Apply initial value
+      applyHeight();
+    }
   }
 
   // ── Read params ─────────────────────────────────────────────────────────────
   function readParams() {
     return {
-      speed:          parseInt(ui.speed.value, 10),
-      maxGenerations: parseInt(ui.maxGen.value, 10),
-      maxPop:         parseInt(ui.maxPop.value, 10),
-      initialPop:     parseInt(ui.initPop.value, 10),
-      initScore:      parseFloat(ui.initScore.value),
-      metabolismCost: parseFloat(ui.metabolismCost.value),
-      deathThreshold: parseFloat(ui.deathThresh.value),
-      reproThreshold: parseFloat(ui.reproThresh.value),
-      mutationRate:   parseInt(ui.mutationRate.value, 10) / 100,
-      roundsPerMatch: parseInt(ui.roundsPerMatch.value, 10),
-      matchesPerGen:  parseInt(ui.matchesPerGen.value, 10),
-      memoryLen:      parseInt(ui.memoryLen.value, 10),
+      speed:               parseFloat(ui.speed.value),
+      maxGenerations:      parseInt(ui.maxGen.value, 10),
+      maxPop:              parseInt(ui.maxPop.value, 10),
+      initialPop:          parseInt(ui.initPop.value, 10),
+      initScore:           parseFloat(ui.initScore.value),
+      metabolismCost:      parseFloat(ui.metabolismCost.value),
+      deathThreshold:      parseFloat(ui.deathThresh.value),
+      reproThreshold:      parseFloat(ui.reproThresh.value),
+      mutationRate:        parseInt(ui.mutationRate.value, 10) / 100,
+      roundsPerMatch:      parseInt(ui.roundsPerMatch.value, 10),
+      matchesPerGen:       parseInt(ui.matchesPerGen.value, 10),
+      memoryLen:           parseInt(ui.memoryLen.value, 10),
+      neighborProb:        parseInt(ui.neighborProb.value, 10) / 100,
+      misunderstandingRate:parseInt(ui.misunderstandRate.value, 10) / 100,
+      maxAge:              parseInt(ui.maxAge.value, 10),
       payoff: {
         T: parseFloat(ui.payoffT.value),
         R: parseFloat(ui.payoffR.value),
@@ -1199,12 +1348,15 @@ class ChartManager {
     ui.roundsPerMatch.value = p.roundsPerMatch;
     ui.matchesPerGen.value  = p.matchesPerGen;
     ui.memoryLen.value      = p.memoryLen;
+    ui.neighborProb.value   = p.neighborProb * 100;
+    ui.misunderstandRate.value = p.misunderstandingRate * 100;
+    ui.maxAge.value         = p.maxAge;
     ui.payoffT.value        = p.payoff.T;
     ui.payoffR.value        = p.payoff.R;
     ui.payoffP.value        = p.payoff.P;
     ui.payoffS.value        = p.payoff.S;
-    ['sim-speed','max-gen','max-pop','init-pop','init-score','metabolism-cost','death-thresh','repro-thresh',
-     'mutation-rate','rounds-per-match','matches-per-gen','memory-len'].forEach(function(id) {
+    ['sim-speed','arena-height','max-gen','max-pop','init-pop','init-score','metabolism-cost','death-thresh','repro-thresh',
+     'mutation-rate','rounds-per-match','matches-per-gen','memory-len','neighbor-prob','misunderstand-rate','max-age'].forEach(function(id) {
       var el = $(id); if (el) el.dispatchEvent(new Event('input'));
     });
     for (const s of STRATEGIES) {
@@ -1237,11 +1389,23 @@ class ChartManager {
 
     sim.on('generation', function(data) {
       // Live-update params the user can tweak mid-run
-      sim.params.speed          = parseInt(ui.speed.value, 10);
-      sim.params.mutationRate   = parseInt(ui.mutationRate.value, 10) / 100;
-      sim.params.metabolismCost = parseFloat(ui.metabolismCost.value);
-      sim.params.deathThreshold = parseFloat(ui.deathThresh.value);
-      sim.params.reproThreshold = parseFloat(ui.reproThresh.value);
+      const p = readParams();
+      sim.params.speed               = p.speed;
+      sim.params.maxGenerations      = p.maxGenerations;
+      sim.params.maxPop              = p.maxPop;
+      sim.params.metabolismCost      = p.metabolismCost;
+      sim.params.deathThreshold      = p.deathThreshold;
+      sim.params.reproThreshold      = p.reproThreshold;
+      sim.params.mutationRate        = p.mutationRate;
+      sim.params.roundsPerMatch      = p.roundsPerMatch;
+      sim.params.matchesPerGen       = p.matchesPerGen;
+      sim.params.memoryLen           = p.memoryLen;
+      sim.params.neighborProb        = p.neighborProb;
+      sim.params.misunderstandingRate= p.misunderstandingRate;
+      sim.params.maxAge              = p.maxAge;
+      sim.params.payoff              = p.payoff;
+      
+      if (renderer) renderer.showAge = ui.showAge ? ui.showAge.checked : false;
       renderer.update(data.blobs, data.births, data.deaths, data.matchups || []);
       charts.update(data.snapshot, { births: data.births, deaths: data.deaths, mutations: data.mutations });
       updateStatBar(data.generation, data.blobs.length, data.totalBirths, data.totalDeaths, data.totalMutations, sim.getDominant());
@@ -1253,6 +1417,7 @@ class ChartManager {
     sim.on('finished', function(data) {
       appendLog({ cssClass: 'info', message: '✅ Simulation ended at generation ' + data.generation + '.', generation: data.generation });
       setButtonState('finished');
+      showEndModal(sim);
     });
 
     sim.on('stateChange', function(data) {
@@ -1329,6 +1494,39 @@ class ChartManager {
     while (ui.logEntries.children.length > 100) ui.logEntries.removeChild(ui.logEntries.lastChild);
   }
 
+  // ── End-of-simulation modal ─────────────────────────────────────────────────
+  function showEndModal(simRef) {
+    if (!ui.endModal) return;
+    ui.endModal.classList.remove('hidden');
+    var stats = simRef.getStrategyStats ? simRef.getStrategyStats() : [];
+    var gen   = simRef.generation || 0;
+    var summaryEl = document.getElementById('end-summary');
+    if (summaryEl) summaryEl.textContent = 'Final populations after ' + gen + ' generation(s).';
+    var canvas = document.getElementById('end-chart');
+    if (!canvas) return;
+    var alive = stats.filter(function(s){ return s.count > 0; }).sort(function(a,b){ return b.count - a.count; });
+    if (window._endChart) { window._endChart.destroy(); window._endChart = null; }
+    window._endChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: alive.map(function(s){ return s.name; }),
+        datasets: [{
+          label: 'Population',
+          data: alive.map(function(s){ return s.count; }),
+          backgroundColor: alive.map(function(s){ return s.color + 'aa'; }),
+          borderColor:     alive.map(function(s){ return s.color; }),
+          borderWidth: 1.5,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+  }
+
   // ── Chart tabs ──────────────────────────────────────────────────────────────
   function initTabs() {
     ui.tabBtns.forEach(function(btn) {
@@ -1348,6 +1546,12 @@ class ChartManager {
   ui.btnStep.addEventListener('click',    stepSim);
   ui.btnRestart.addEventListener('click', restartSim);
   ui.btnReset.addEventListener('click',   resetToDefaults);
+
+  if (ui.btnZoomIn)   ui.btnZoomIn.addEventListener('click',   function(){ if (renderer) { renderer._zoom = Math.min(10, renderer._zoom * 1.3); } });
+  if (ui.btnZoomOut)  ui.btnZoomOut.addEventListener('click',  function(){ if (renderer) { renderer._zoom = Math.max(0.15, renderer._zoom / 1.3); } });
+  if (ui.btnPanReset) ui.btnPanReset.addEventListener('click', function(){ if (renderer) renderer.resetView(); });
+  if (ui.btnCloseEnd) ui.btnCloseEnd.addEventListener('click', function(){ if (ui.endModal) ui.endModal.classList.add('hidden'); });
+  if (ui.showAge)     ui.showAge.addEventListener('change',    function(){ if (renderer) renderer.showAge = ui.showAge.checked; });
 
   // ── Boot ─────────────────────────────────────────────────────────────────────
   buildStrategySliders();

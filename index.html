@@ -60,8 +60,13 @@
         <h3 class="group-title">🎮 Simulation</h3>
 
         <div class="control-row">
-          <label for="sim-speed">Speed <span class="val" id="val-speed">5</span>×</label>
-          <input type="range" id="sim-speed" min="1" max="50" value="5" step="1" />
+          <label for="sim-speed">Simulation Speed <span><span class="val" id="val-speed">5</span><span class="unit">×</span></span></label>
+          <input type="range" id="sim-speed" min="0.1" max="50" value="5" step="0.1" />
+        </div>
+
+        <div class="control-row">
+          <label for="arena-height">Arena Height <span><span class="val" id="val-arena-height">500</span><span class="unit">px</span></span></label>
+          <input type="range" id="arena-height" min="300" max="1000" value="500" step="50" />
         </div>
 
         <div class="control-row">
@@ -105,8 +110,18 @@
         </div>
 
         <div class="control-row">
-          <label for="mutation-rate">Mutation Rate <span class="val" id="val-mutation-rate">5</span>%</label>
+          <label for="mutation-rate">Mutation Rate <span><span class="val" id="val-mutation-rate">5</span><span class="unit">%</span></span></label>
           <input type="range" id="mutation-rate" min="0" max="50" value="5" step="1" />
+        </div>
+
+        <div class="control-row">
+          <label for="max-age">Max Age (0 = unlimited) <span class="val" id="val-max-age">0</span></label>
+          <input type="range" id="max-age" min="0" max="500" value="0" step="5" />
+        </div>
+
+        <div class="toggle-row">
+          <label for="show-age">🔢 Show age on blobs</label>
+          <input type="checkbox" id="show-age" />
         </div>
       </div>
 
@@ -125,8 +140,18 @@
         </div>
 
         <div class="control-row">
-          <label for="memory-len">Memory Length <span class="val" id="val-memory">5</span> rounds</label>
+          <label for="memory-len">Memory Length <span><span class="val" id="val-memory">5</span><span class="unit"> rounds</span></span></label>
           <input type="range" id="memory-len" min="1" max="20" value="5" step="1" />
+        </div>
+
+        <div class="control-row">
+          <label for="neighbor-prob">Neighbour Matchups <span><span class="val" id="val-neighbor">50</span><span class="unit">%</span></span></label>
+          <input type="range" id="neighbor-prob" min="0" max="100" value="50" step="5" />
+        </div>
+
+        <div class="control-row">
+          <label for="misunderstand-rate">Misunderstanding Rate <span><span class="val" id="val-misunderstand">5</span><span class="unit">%</span></span></label>
+          <input type="range" id="misunderstand-rate" min="0" max="50" value="5" step="1" />
         </div>
       </div>
 
@@ -203,8 +228,13 @@
       </div>
 
       <!-- Canvas -->
-      <div class="canvas-wrapper" id="canvas-wrapper">
+      <div class="canvas-wrapper" id="canvas-wrapper" style="position:relative;">
         <canvas id="sim-canvas"></canvas>
+        <div class="canvas-nav">
+          <button id="btn-zoom-in" title="Zoom in">+</button>
+          <button id="btn-zoom-out" title="Zoom out">−</button>
+          <button id="btn-pan-reset" title="Reset view">⌂</button>
+        </div>
         <div class="canvas-overlay" id="canvas-overlay">
           <div class="overlay-inner">
             <div class="overlay-icon">🧬</div>
@@ -278,6 +308,16 @@
       </div>
     </div>
   </footer>
+
+  <!-- ─── END MODAL ─── -->
+  <div id="end-modal" class="end-modal hidden">
+    <div class="end-modal-inner">
+      <h2>🏁 Simulation Complete</h2>
+      <p id="end-summary">Final population breakdown after all generations.</p>
+      <div class="end-chart-wrap"><canvas id="end-chart"></canvas></div>
+      <button class="btn" id="btn-close-end">Close</button>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
