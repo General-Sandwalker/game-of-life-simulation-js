@@ -20,7 +20,7 @@ import { COOPERATE, DEFECT } from './strategies.js';
 
 export const DEFAULT_PARAMS = {
   // Simulation
-  speed:          5,      // generations per animation frame (1–50)
+  speed:          0.1,      // generations per animation frame (1–50)
   maxGenerations: 500,
   // Population
   initialPop:     60,
