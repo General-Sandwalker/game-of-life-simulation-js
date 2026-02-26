@@ -208,7 +208,7 @@ function resetBlobIds() { _nextBlobId = 1; }
 /* ─── simulation.js ──────────────────────────────────────────────────────── */
 
 const DEFAULT_PARAMS = {
-  speed: 5, maxGenerations: 1000,
+  speed: 0.5, maxGenerations: 1000,
   initialPop: 60, initScore: 5.0,
   metabolismCost: 1.5, deathThreshold: 1.0, reproThreshold: 8.0,
   mutationRate: 0.05, maxPop: 300,
