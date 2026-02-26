@@ -163,9 +163,12 @@ export class Simulation {
       return;
     }
 
-    const stepsThisFrame = Math.max(1, Math.round(this.params.speed));
-    for (let i = 0; i < stepsThisFrame; i++) {
-      if (!this.isFinished) this._runGeneration();
+    // Fractional speed: accumulate credits each frame, consume whole generations.
+    // speed < 1 → skip frames; speed > 1 → multiple gens per frame.
+    this._stepAccumulator += Math.max(0.01, this.params.speed);
+    while (this._stepAccumulator >= 1 && !this.isFinished) {
+      this._runGeneration();
+      this._stepAccumulator -= 1;
     }
 
     this._rafId = requestAnimationFrame(() => this._loop());

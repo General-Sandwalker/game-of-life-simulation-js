@@ -310,8 +310,8 @@ class Simulation {
       this.emit('finished', { generation: this.generation });
       return;
     }
-    // fractional speed: accumulate credits, run 1 gen per credit
-    this._frameCredit = (this._frameCredit || 0) + Math.max(0.05, this.params.speed);
+    // fractional speed: accumulate credits each frame, consume 1 gen per credit
+    this._frameCredit = (this._frameCredit || 0) + Math.max(0.01, this.params.speed);
     while (this._frameCredit >= 1 && !this.isFinished) {
       this._runGeneration();
       this._frameCredit -= 1;
